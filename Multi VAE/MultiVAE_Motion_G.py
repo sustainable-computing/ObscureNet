@@ -644,7 +644,15 @@ for activity in range(4):
     latent_means[activity, 0, :] = np.mean(z_train_0, axis=0)
     latent_means[activity, 1, :] = np.mean(z_train_1, axis=0)
 
+
+print("This is the testing phase")
+
 for activity in range(4):
+    print()
+    print()
+    print("#######################")
+    print(activity)
+    
     encodermodel = Encoder().double()
     encodermodel.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/multi_vae_encoder_motion_'+str(activity)+str(z_dim)))
     if usecuda:
@@ -804,7 +812,10 @@ for activity in range(4):
     act_acc = round(result1[1], 4) * 100
     print("***[RESULT]***Original: Weight Train Accuracy Gender 0: " + str(act_acc))
 
+print("This is the deployment phase")
+
 for activity_index in range(4):
+    print()
     print("This is the current activity")
     print(activity_index)
     # TESTing
