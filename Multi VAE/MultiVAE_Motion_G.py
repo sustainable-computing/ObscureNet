@@ -462,7 +462,7 @@ for z_dim in zed:
             h5 = self.fc5(h4)
             return h5
 
-    for activity in range(4):
+    for activity in [1]:
         DS = DataSampler()
         x_train = DS.all_train()
         y_train = DS.all_train_labels()
@@ -504,7 +504,7 @@ for z_dim in zed:
 
         optimizerencoder = optim.Adam(encodermodel.parameters())
         optimizerdecoder = optim.Adam(decodermodel.parameters())
-
+'''
         for i in range(300):
             for batch_idx, (train_x, train_y) in enumerate(train_loader):
                 train_x= Variable(train_x)
@@ -536,7 +536,7 @@ for z_dim in zed:
                     print("Epoch %d : MSE is %f, KLD loss is %f" % (i,recons_loss.data, kld_loss.data))
         torch.save(encodermodel.state_dict(), '/home/omid/pycharm/Mobi/models/multi_vae_encoder_motion_'+str(activity)+str(z_dim))
         torch.save(decodermodel.state_dict(), '/home/omid/pycharm/Mobi/models/multi_vae_decoder_motion_'+str(activity)+str(z_dim))
-
+'''
 def print_results(M, X, Y):
     result1 = M.evaluate(X, Y, verbose=2)
     print(result1)
@@ -585,9 +585,10 @@ for activity in range(4):
     print("This is the current activity")
     print(activity)
     # TESTing
-    train_data = x_train
-    act_train_labels = act_train_labels
-    gen_train_labels = gen_train_labels
+    train_data = DS.all_train()
+    y_train = DS.all_train_labels()
+    act_train_labels = DS.all_train_labels()
+    gen_train_labels = DS.all_gender_train_labels()
     # activity_index = 0
     train_data = train_data[act_train_labels[:, activity] == 1]
     gen_train_labels = gen_train_labels[act_train_labels[:, activity] == 1]
