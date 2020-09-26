@@ -167,7 +167,7 @@ for z_dim in zed:
 
         optimizerencoder = optim.Adam(encodermodel.parameters())
         optimizerdecoder = optim.Adam(decodermodel.parameters())
-'''
+
         for i in range(40):
             for batch_idx, (train_x) in enumerate(train_loader):
                 train_x= Variable(train_x[0])
@@ -196,7 +196,7 @@ for z_dim in zed:
                     print("Epoch %d : MSE is %f, KLD loss is %f" % (i,recons_loss.data, kld_loss.data))
         torch.save(encodermodel.state_dict(), '/home/omid/pycharm/Mobi/models/multi_vae_encoder_'+str(activity)+str(z_dim))
         torch.save(decodermodel.state_dict(), '/home/omid/pycharm/Mobi/models/multi_vae_decoder_'+str(activity)+str(z_dim))
-'''
+
 
 z_dim = 5
 def print_results(M, X, Y):
