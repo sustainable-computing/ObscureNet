@@ -1,7 +1,7 @@
 import numpy as np
 import os
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID";
-os.environ["CUDA_VISIBLE_DEVICES"] = "1";
+os.environ["CUDA_VISIBLE_DEVICES"] = "0";
 from keras.layers import Reshape, Lambda
 import numpy as np
 import pandas as pd
@@ -39,8 +39,8 @@ def to_var(x):
         x = x.cuda()
     return Variable(x)
 
-usecuda = True
-use_gpu = True
+usecuda = False
+use_gpu = False
 idgpu = 0
 x_dim = 3
 AI = 1 #Activity Index
@@ -206,7 +206,7 @@ for z_dim in zed:
 
         optimizerencoder = optim.Adam(encodermodel.parameters())
         optimizerdecoder = optim.Adam(decodermodel.parameters())
-
+'''
         for i in range(200):
             for batch_idx, (train_x, train_y) in enumerate(train_loader):
                 train_x= Variable(train_x)
@@ -239,7 +239,7 @@ for z_dim in zed:
                     print("Epoch %d : MSE is %f, KLD loss is %f" % (i,recons_loss.data, kld_loss.data))
         torch.save(encodermodel.state_dict(), '/home/omid/pycharm/Mobi/models/multi_vae_encoder_weight_'+str(activity)+str(z_dim))
         torch.save(decodermodel.state_dict(), '/home/omid/pycharm/Mobi/models/multi_vae_decoder_weight_'+str(activity)+str(z_dim))
-
+'''
 z_dim = 5
 def print_results(M, X, Y):
     result1 = M.evaluate(X, Y, verbose=2)
@@ -247,8 +247,11 @@ def print_results(M, X, Y):
     act_acc = round(result1[1], 4) * 100
     print("***[RESULT]*** ACT Accuracy: " + str(act_acc))
 
-Latent_means = np.zeros((5, 3, z_dim))
+latent_means = np.zeros((5, 3, z_dim))
 
+eval_act_model = load_model("activity_model_DC.hdf5")
+eval_weight_model = load_model("weight_model_DC.hdf5")
+'''
 for activity in range(4):
     encodermodel = Encoder().double()
     encodermodel.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/multi_vae_encoder_weight_'+str(activity)+str(z_dim)))
@@ -273,20 +276,17 @@ for activity in range(4):
     weight_train_labels = weight_train_labels[act_train_labels[:, activity] == 1]
     act_train_labels = act_train_labels[act_train_labels[:, activity] == 1]
 
-    eval_act_model = load_model("activity_model_DC.hdf5")
-    eval_weight_model = load_model("weight_model_DC.hdf5")
+    # # X = np.reshape(hat_train_data, (hat_train_data.shape[0], 2, 128, 1))
+    # X = train_data
+    # Y = act_train_labels
+    # print("Activity Identification for Gender 0")
+    # print_results(eval_act_model, X, Y)
 
-    # X = np.reshape(hat_train_data, (hat_train_data.shape[0], 2, 128, 1))
-    X = train_data
-    Y = act_train_labels
-    print("Activity Identification for Gender 0")
-    print_results(eval_act_model, X, Y)
-
-    # X = np.reshape(hat_train_data, (hat_train_data.shape[0], 2, 128, 1))
-    Y = weight_train_labels
-    result1 = eval_weight_model.evaluate(X, Y)
-    act_acc = round(result1[1], 4) * 100
-    print("***[RESULT]***Original: Weight Train Accuracy Gender 0: " + str(act_acc))
+    # # X = np.reshape(hat_train_data, (hat_train_data.shape[0], 2, 128, 1))
+    # Y = weight_train_labels
+    # result1 = eval_weight_model.evaluate(X, Y)
+    # act_acc = round(result1[1], 4) * 100
+    # print("***[RESULT]***Original: Weight Train Accuracy Gender 0: " + str(act_acc))
 
     ### Manipulation at the Age Level
     train_data_0 = train_data[weight_train_labels[:, 0] == 1]
@@ -305,9 +305,6 @@ for activity in range(4):
         weight_train_data_1[j, 1] = 1
     for j in range(weight_train_data_2.shape[0]):
         weight_train_data_2[j, 2] = 1
-
-    eval_act_model = load_model("activity_model_DC.hdf5")
-    eval_weight_model = load_model("weight_model_DC.hdf5")
 
     train_data_0 = np.reshape(train_data_0, [train_data_0.shape[0], 768])
     train_data_1 = np.reshape(train_data_1, [train_data_1.shape[0], 768])
@@ -376,6 +373,7 @@ for activity in range(4):
     latent_means[activity, 0, :] = np.mean(z_train_0, axis=0)
     latent_means[activity, 1, :] = np.mean(z_train_1, axis=0)
     latent_means[activity, 2, :] = np.mean(z_train_2, axis=0)
+np.save("/home/omid/pycharm/Mobi/latent", latent_means)
 
 for activity in range(4):
     encodermodel = Encoder().double()
@@ -582,94 +580,95 @@ for activity in range(4):
     act_acc = round(result1[1], 4) * 100
     print("***[RESULT]***Original: Weight Train Accuracy Gender 0: " + str(act_acc))
 '''
+latent_means = np.load("/home/omid/pycharm/Mobi/latent.npy")
 
 act_label = 0
 gen_label = 0
-data_subjects = pd.read_csv("/home/omid/pycharm/Mobi/data_subjects.csv")
-data = np.load("/home/omid/pycharm/Mobi/Data/total_data.npy", allow_pickle=True)
-activity = np.load("/home/omid/pycharm/Mobi/Data/activity_labels.npy", allow_pickle=True)
-gender = np.load("/home/omid/pycharm/Mobi/Data/gender_labels.npy", allow_pickle=True)
-age = np.load("/home/omid/pycharm/Mobi/Data/age_labels.npy", allow_pickle=True)
-id = np.load("/home/omid/pycharm/Mobi/Data/id_labels.npy", allow_pickle=True)
+# data_subjects = pd.read_csv("/home/omid/pycharm/Mobi/data_subjects.csv")
+# data = np.load("/home/omid/pycharm/Mobi/Data/total_data.npy", allow_pickle=True)
+# activity = np.load("/home/omid/pycharm/Mobi/Data/activity_labels.npy", allow_pickle=True)
+# gender = np.load("/home/omid/pycharm/Mobi/Data/gender_labels.npy", allow_pickle=True)
+# age = np.load("/home/omid/pycharm/Mobi/Data/age_labels.npy", allow_pickle=True)
+# id = np.load("/home/omid/pycharm/Mobi/Data/id_labels.npy", allow_pickle=True)
 
-array = np.arange(data.shape[0])
-np.random.shuffle(array)
-data = data[array]
-activity = activity[array]
-gender = gender[array]
-age = age[array]
-id = id[array]
+# array = np.arange(data.shape[0])
+# np.random.shuffle(array)
+# data = data[array]
+# activity = activity[array]
+# gender = gender[array]
+# age = age[array]
+# id = id[array]
 
-data_train = np.array([]).reshape(0, data.shape[1], data.shape[2])
-data_test = np.array([]).reshape(0, data.shape[1], data.shape[2])
-activity_train = np.array([])
-activity_test = np.array([])
-age_train = np.array([])
-age_test = np.array([])
-gender_train = np.array([])
-gender_test = np.array([])
+# data_train = np.array([]).reshape(0, data.shape[1], data.shape[2])
+# data_test = np.array([]).reshape(0, data.shape[1], data.shape[2])
+# activity_train = np.array([])
+# activity_test = np.array([])
+# age_train = np.array([])
+# age_test = np.array([])
+# gender_train = np.array([])
+# gender_test = np.array([])
 
-for i in data_subjects["id"]:
-    data_sub_id = data[id[:] == i]
-    age_sub_id = age[id[:] == i]
-    activity_sub_id = activity[id[:] == i]
-    gender_sub_id = gender[id[:] == i]
-    x_train, x_test, y_train, y_test, z_train, z_test, w_train, w_test = train_test_split(data_sub_id, age_sub_id, activity_sub_id, gender_sub_id, test_size = 0.2, random_state = 42)
-    data_train = np.concatenate((data_train, x_train), axis=0)
-    data_test = np.concatenate((data_test, x_test), axis=0)
-    age_train = np.concatenate((age_train, y_train), axis=0)
-    age_test = np.concatenate((age_test, y_test), axis=0)
-    activity_train = np.concatenate((activity_train, z_train), axis=0)
-    activity_test = np.concatenate((activity_test, z_test), axis=0)
-    gender_train = np.concatenate((gender_train, w_train), axis=0)
-    gender_test = np.concatenate((gender_test, w_test), axis=0)
+# for i in data_subjects["id"]:
+#     data_sub_id = data[id[:] == i]
+#     age_sub_id = age[id[:] == i]
+#     activity_sub_id = activity[id[:] == i]
+#     gender_sub_id = gender[id[:] == i]
+#     x_train, x_test, y_train, y_test, z_train, z_test, w_train, w_test = train_test_split(data_sub_id, age_sub_id, activity_sub_id, gender_sub_id, test_size = 0.2, random_state = 42)
+#     data_train = np.concatenate((data_train, x_train), axis=0)
+#     data_test = np.concatenate((data_test, x_test), axis=0)
+#     age_train = np.concatenate((age_train, y_train), axis=0)
+#     age_test = np.concatenate((age_test, y_test), axis=0)
+#     activity_train = np.concatenate((activity_train, z_train), axis=0)
+#     activity_test = np.concatenate((activity_test, z_test), axis=0)
+#     gender_train = np.concatenate((gender_train, w_train), axis=0)
+#     gender_test = np.concatenate((gender_test, w_test), axis=0)
 
-nb_classes = len(np.unique(activity_train[:]))
-activity_train_label = keras.utils.to_categorical(activity_train[:], nb_classes)
-nb_classes = len(np.unique(activity_test[:]))
-activity_test_label = keras.utils.to_categorical(activity_test[:], nb_classes)
-nb_classes = len(np.unique(age_train[:]))
-age_train_label = keras.utils.to_categorical(age_train[:], nb_classes)
-nb_classes = len(np.unique(age_test[:]))
-age_test_label = keras.utils.to_categorical(age_test[:], nb_classes)
-gender_train_label = gender_train
-gender_test_label = gender_test
-x_train = data_train.reshape((data_train.shape[0], data_train.shape[1], data_train.shape[2], 1))
-x_test = data_test.reshape((data_test.shape[0], data_test.shape[1], data_test.shape[2], 1))
+# nb_classes = len(np.unique(activity_train[:]))
+# activity_train_label = keras.utils.to_categorical(activity_train[:], nb_classes)
+# nb_classes = len(np.unique(activity_test[:]))
+# activity_test_label = keras.utils.to_categorical(activity_test[:], nb_classes)
+# nb_classes = len(np.unique(age_train[:]))
+# age_train_label = keras.utils.to_categorical(age_train[:], nb_classes)
+# nb_classes = len(np.unique(age_test[:]))
+# age_test_label = keras.utils.to_categorical(age_test[:], nb_classes)
+# gender_train_label = gender_train
+# gender_test_label = gender_test
+# x_train = data_train.reshape((data_train.shape[0], data_train.shape[1], data_train.shape[2], 1))
+# x_test = data_test.reshape((data_test.shape[0], data_test.shape[1], data_test.shape[2], 1))
 
 encodermodel_0 = Encoder().double()
-encodermodel_0.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/5vae_encoder_0'+str(z_dim)))
+encodermodel_0.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/multi_vae_encoder_weight_0'+str(z_dim)))
 if usecuda:
     encodermodel_0.cuda(idgpu)
 decodermodel_0 = Decoder().double()
-decodermodel_0.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/5vae_decoder_0'+str(z_dim)))
+decodermodel_0.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/multi_vae_decoder_weight_0'+str(z_dim)))
 if usecuda:
     decodermodel_0.cuda(idgpu)
 
 encodermodel_1 = Encoder().double()
-encodermodel_1.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/5vae_encoder_1'+str(z_dim)))
+encodermodel_1.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/multi_vae_encoder_weight_1'+str(z_dim)))
 if usecuda:
     encodermodel_1.cuda(idgpu)
 decodermodel_1 = Decoder().double()
-decodermodel_1.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/5vae_decoder_1'+str(z_dim)))
+decodermodel_1.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/multi_vae_decoder_weight_1'+str(z_dim)))
 if usecuda:
     decodermodel_1.cuda(idgpu)
 
 encodermodel_2 = Encoder().double()
-encodermodel_2.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/5vae_encoder_2'+str(z_dim)))
+encodermodel_2.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/multi_vae_encoder_weight_2'+str(z_dim)))
 if usecuda:
     encodermodel_2.cuda(idgpu)
 decodermodel_2 = Decoder().double()
-decodermodel_2.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/5vae_decoder_2'+str(z_dim)))
+decodermodel_2.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/multi_vae_decoder_weight_2'+str(z_dim)))
 if usecuda:
     decodermodel_2.cuda(idgpu)
 
 encodermodel_3 = Encoder().double()
-encodermodel_3.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/5vae_encoder_3'+str(z_dim)))
+encodermodel_3.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/multi_vae_encoder_weight_3'+str(z_dim)))
 if usecuda:
     encodermodel_3.cuda(idgpu)
 decodermodel_3 = Decoder().double()
-decodermodel_3.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/5vae_decoder_3'+str(z_dim)))
+decodermodel_3.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/multi_vae_decoder_weight_3'+str(z_dim)))
 if usecuda:
     decodermodel_3.cuda(idgpu)
 
@@ -691,23 +690,18 @@ for activity in [0]:
     weight_train_labels = weight_train_labels[act_train_labels[:, activity] == 1]
     act_train_labels = act_train_labels[act_train_labels[:, activity] == 1]
 
-    eval_act_model = load_model("activity_model_DC.hdf5")
-    eval_weight_model = load_model("weight_model_DC.hdf5")
-
-    t_data = np.reshape(train_data, [train_data.shape[0], train_data.shape[1], train_data.shape[2],train_data.shape[3]])
-    X = t_data
+    X = np.reshape(train_data, (train_data.shape[0], train_data.shape[1], train_data.shape[2],train_data.shape[3]))
+    # X = train_data
     Y = act_train_labels
     print("Activity Identification for Gender 0")
     print_results(eval_act_model, X, Y)
+
     # X = np.reshape(hat_train_data, (hat_train_data.shape[0], 2, 128, 1))
     Y = weight_train_labels
     result1 = eval_weight_model.evaluate(X, Y)
     act_acc = round(result1[1], 4) * 100
     print("***[RESULT]***Original: Weight Train Accuracy Gender 0: " + str(act_acc))
     
-    eval_act_model = load_model("activity_model_DC.hdf5")
-    eval_weight_model = load_model("weight_model_DC.hdf5")
-
     pred_act = np.zeros((train_data.shape[0], 4))
     pred_weight = np.zeros((train_data.shape[0], 3))
 
@@ -772,11 +766,19 @@ for activity in [0]:
                 if(usecuda):
                     x = x.cuda(idgpu)
                     y = y.cuda(idgpu)
-                x_cat = torch.cat((x, y), dim=1)
-                z_e = encodermodel(x_cat)[0]
+                z_e = encodermodel(x)[0]
                 z = np.append(z, z_e.data.cpu(), axis=0)
 
             z_train = z.copy()
+
+            for l in range(z_train.shape[0]):
+                if Y_weight_inside[l, 0] == 1:
+                    z_train[l] = z_train[l] - latent_means[activity, 0, :] + latent_means[activity, 2, :]
+                elif Y_weight_inside[1, 1] == 1:
+                    z_train[l] = z_train[l] - latent_means[activity, 1, :] + latent_means[activity, 0, :]
+                else:
+                    z_train[l] = z_train[l] - latent_means[activity, 2, :] + latent_means[activity, 1, :]
+            
             tensor_z = torch.from_numpy(z_train) # transform to torch tensor
             y_dataset = np.zeros((Y_weight_inside.shape[0], 3))
             for i in range(Y_weight_inside.shape[0]):
@@ -797,8 +799,7 @@ for activity in [0]:
                 if(use_gpu):
                     z = z.cuda(idgpu)
                     y = y.cuda(idgpu)
-                z_cat = torch.cat((z, y), dim=1)
-                x_hat = decodermodel(z_cat)
+                x_hat = decodermodel(z)
                 hat_train_data = np.append(hat_train_data, x_hat.data.cpu(), axis=0)
     
     X = np.reshape(hat_train_data, [train_data.shape[0], train_data.shape[1], train_data.shape[2],train_data.shape[3]])
@@ -811,4 +812,3 @@ for activity in [0]:
     result1 = eval_weight_model.evaluate(X, Y)
     act_acc = round(result1[1], 4) * 100
     print("Weight Identification: " + str(act_acc))
-    '''

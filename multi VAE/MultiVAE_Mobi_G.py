@@ -167,8 +167,8 @@ for z_dim in zed:
 
         optimizerencoder = optim.Adam(encodermodel.parameters())
         optimizerdecoder = optim.Adam(decodermodel.parameters())
-
-        for i in range(200):
+'''
+        for i in range(40):
             for batch_idx, (train_x) in enumerate(train_loader):
                 train_x= Variable(train_x[0])
                 true_samples = torch.randn((len(train_x),z_dim))
@@ -196,8 +196,7 @@ for z_dim in zed:
                     print("Epoch %d : MSE is %f, KLD loss is %f" % (i,recons_loss.data, kld_loss.data))
         torch.save(encodermodel.state_dict(), '/home/omid/pycharm/Mobi/models/multi_vae_encoder_'+str(activity)+str(z_dim))
         torch.save(decodermodel.state_dict(), '/home/omid/pycharm/Mobi/models/multi_vae_decoder_'+str(activity)+str(z_dim))
-
-
+'''
 z_dim = 5
 def print_results(M, X, Y):
     result1 = M.evaluate(X, Y, verbose=2)
@@ -360,7 +359,7 @@ for activity in range(4):
 
     latent_means[activity, 0, :] = np.mean(z_train_0, axis=0)
     latent_means[activity, 1, :] = np.mean(z_train_1, axis=0)
-    
+
 
 print("This is the testing phase")
 
@@ -413,10 +412,8 @@ for activity in range(4):
     ### Manipulation at the Gender Level
     train_data_0 = train_data[gen_train_labels == 0]
     act_train_labels_0 = act_train_labels[gen_train_labels == 0]
-    act_train_0 = act_train[gen_train_labels == 0]
     train_data_1 = train_data[gen_train_labels == 1]
     act_train_labels_1 = act_train_labels[gen_train_labels == 1]
-    act_train_1 = act_train[gen_train_labels == 1]
     gender_train_data_0 = np.zeros((train_data_0.shape[0]))
     gender_train_data_1 = np.ones((train_data_1.shape[0]))
 
@@ -485,8 +482,8 @@ for activity in range(4):
     z_0_loader = torch.utils.data.DataLoader(z_0_dataset, batch_size=256, shuffle=False)
     z_1_loader = torch.utils.data.DataLoader(z_1_dataset, batch_size=256, shuffle=False)
 
-    hat_train_data_0 = np.empty((0,256), float)
-    hat_train_data_1 = np.empty((0,256), float)
+    hat_train_data_0 = np.empty((0,768), float)
+    hat_train_data_1 = np.empty((0,768), float)
 
     for batch_idx, (z, y) in enumerate(z_0_loader):
         z = Variable(z)
@@ -512,7 +509,7 @@ for activity in range(4):
 
     X = np.reshape(hat_train_data, (hat_train_data.shape[0], train_data.shape[1], train_data.shape[2],train_data.shape[3]))
     # reconstructed_input = np.reshape(hat_train_data, [train_data.shape[0], 2, 128, 1])
-    X = hat_train_data
+    # X = hat_train_data
     Y = hat_act_train_labels
     print("Activity Identification for Gender 0")
     print_results(eval_act_model, X, Y)
@@ -629,7 +626,7 @@ for activity in range(4):
             z_train = z.copy()
 
             for l in range(z_train.shape[0]):
-                if Y_gen_inside[l, 0] == 0:
+                if Y_gen_inside[l, 0] == 1:
                     z_train[l] = z_train[l] - latent_means[activity, 0, :] + latent_means[activity, 1, :]
                 else:
                     z_train[l] = z_train[l] - latent_means[activity, 1, :] + latent_means[activity, 0, :]

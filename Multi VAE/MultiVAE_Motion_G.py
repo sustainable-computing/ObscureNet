@@ -920,7 +920,7 @@ for activity_index in range(4):
 
             z_train = z.copy()
             for l in range(z_train.shape[0]):
-                if Y_gen_inside[l, 0] == 0:
+                if Y_gen_inside[l, 0] == 1:
                     z_train[l] = z_train[l] - latent_means[activity, 0, :] + latent_means[activity, 1, :]
                 else:
                     z_train[l] = z_train[l] - latent_means[activity, 1, :] + latent_means[activity, 0, :]
