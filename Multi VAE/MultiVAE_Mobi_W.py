@@ -672,7 +672,7 @@ decodermodel_3.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/multi_
 if usecuda:
     decodermodel_3.cuda(idgpu)
 
-for activity in [0]:
+for activity in range(4):
     print("This is the current activity")
     print(activity)
 

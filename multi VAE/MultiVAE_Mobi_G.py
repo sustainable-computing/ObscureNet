@@ -168,7 +168,7 @@ for z_dim in zed:
         optimizerencoder = optim.Adam(encodermodel.parameters())
         optimizerdecoder = optim.Adam(decodermodel.parameters())
 '''
-        for i in range(40):
+        for i in range(200):
             for batch_idx, (train_x) in enumerate(train_loader):
                 train_x= Variable(train_x[0])
                 true_samples = torch.randn((len(train_x),z_dim))
@@ -197,6 +197,7 @@ for z_dim in zed:
         torch.save(encodermodel.state_dict(), '/home/omid/pycharm/Mobi/models/multi_vae_encoder_'+str(activity)+str(z_dim))
         torch.save(decodermodel.state_dict(), '/home/omid/pycharm/Mobi/models/multi_vae_decoder_'+str(activity)+str(z_dim))
 '''
+
 z_dim = 5
 def print_results(M, X, Y):
     result1 = M.evaluate(X, Y, verbose=2)
