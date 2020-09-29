@@ -297,211 +297,209 @@ def print_results(M, X, Y):
     print(result1)
     act_acc = round(result1[1], 4) * 100
     print("***[RESULT]*** ACT Accuracy: " + str(act_acc))
+encodermodel = Encoder().double()
+encodermodel.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/single_vae_encoder_all'+str(z_dim)+'gender'))
+if usecuda:
+    encodermodel.cuda(idgpu)
 
+decodermodel = Decoder().double()
+decodermodel.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/single_vae_decoder_all'+str(z_dim)+'gender'))
+if usecuda:
+    decodermodel.cuda(idgpu)
 Latent_means = np.zeros((5, 2, z_dim))
-for activity in range(4):
-    encodermodel = Encoder().double()
-    encodermodel.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/single_vae_encoder_all'+str(z_dim)+'gender'))
-    if usecuda:
-        encodermodel.cuda(idgpu)
+# for activity in [1]:
+#     # # Obtaining the Average Values from the Training Sets
+#     # train_data = x_train
+#     # act_train_labels = activity_train_label
+#     # gen_train_labels = gender_train_label
+#     # # activity_index = 0
+#     # train_data = train_data[act_train_labels[:, activity] == 1]
+#     # gen_train_labels = gen_train_labels[act_train_labels[:, activity] == 1]
+#     # act_train_labels = act_train_labels[act_train_labels[:, activity] == 1]
+#     # ### Manipulation at the Gender Level
+#     # train_data_0 = train_data[gen_train_labels == 0]
+#     # act_train_labels_0 = act_train_labels[gen_train_labels == 0]
+#     # train_data_1 = train_data[gen_train_labels == 1]
+#     # act_train_labels_1 = act_train_labels[gen_train_labels == 1]
+#     # gender_train_data_0 = np.zeros((train_data_0.shape[0]))
+#     # gender_train_data_1 = np.ones((train_data_1.shape[0]))
 
-    decodermodel = Decoder().double()
-    decodermodel.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/single_vae_decoder_all'+str(z_dim)+'gender'))
-    if usecuda:
-        decodermodel.cuda(idgpu)
+#     # eval_act_model = load_model("activity_model_DC.hdf5")
+#     # eval_gen_model = load_model("gender_model_DC.hdf5")
 
-    # Obtaining the Average Values from the Training Sets
-    train_data = x_train
-    act_train_labels = activity_train_label
-    gen_train_labels = gender_train_label
-    # activity_index = 0
-    train_data = train_data[act_train_labels[:, activity] == 1]
-    gen_train_labels = gen_train_labels[act_train_labels[:, activity] == 1]
-    act_train_labels = act_train_labels[act_train_labels[:, activity] == 1]
-    ### Manipulation at the Gender Level
-    train_data_0 = train_data[gen_train_labels == 0]
-    act_train_labels_0 = act_train_labels[gen_train_labels == 0]
-    train_data_1 = train_data[gen_train_labels == 1]
-    act_train_labels_1 = act_train_labels[gen_train_labels == 1]
-    gender_train_data_0 = np.zeros((train_data_0.shape[0]))
-    gender_train_data_1 = np.ones((train_data_1.shape[0]))
+#     # # # X = np.reshape(hat_train_data, (hat_train_data.shape[0], 2, 128, 1))
+#     # # train_data = np.reshape(train_data, [train_data.shape[0], train_data.shape[1], train_data.shape[2],train_data.shape[3]])
+#     # # X = train_data
+#     # # Y = act_train_labels
+#     # # print("Activity Identification for Gender 0")
+#     # # print_results(eval_act_model, X, Y)
 
-    eval_act_model = load_model("activity_model_DC.hdf5")
-    eval_gen_model = load_model("gender_model_DC.hdf5")
+#     # # # X = np.reshape(hat_train_data, (hat_train_data.shape[0], 2, 128, 1))
+#     # # Y = gen_train_labels
+#     # # result1 = eval_gen_model.evaluate(X, Y)
+#     # # act_acc = round(result1[1], 4) * 100
+#     # # print("***[RESULT]***Original: GEN Train Accuracy Gender 0: " + str(act_acc))
 
-    # # X = np.reshape(hat_train_data, (hat_train_data.shape[0], 2, 128, 1))
-    # train_data = np.reshape(train_data, [train_data.shape[0], train_data.shape[1], train_data.shape[2],train_data.shape[3]])
-    # X = train_data
-    # Y = act_train_labels
-    # print("Activity Identification for Gender 0")
-    # print_results(eval_act_model, X, Y)
+#     # train_data_0 = np.reshape(train_data_0, [train_data_0.shape[0], 768])
+#     # train_data_1 = np.reshape(train_data_1, [train_data_1.shape[0], 768])
 
-    # # X = np.reshape(hat_train_data, (hat_train_data.shape[0], 2, 128, 1))
-    # Y = gen_train_labels
-    # result1 = eval_gen_model.evaluate(X, Y)
-    # act_acc = round(result1[1], 4) * 100
-    # print("***[RESULT]***Original: GEN Train Accuracy Gender 0: " + str(act_acc))
+#     # tensor_data_0 = torch.from_numpy(train_data_0) # transform to torch tensor
+#     # data_0_dataset = TensorDataset(tensor_data_0)
+#     # tensor_data_1 = torch.from_numpy(train_data_1) # transform to torch tensor
+#     # data_1_dataset = TensorDataset(tensor_data_1)
+#     # train_0_loader = torch.utils.data.DataLoader(data_0_dataset, batch_size=256, shuffle=False)
+#     # train_1_loader = torch.utils.data.DataLoader(data_1_dataset, batch_size=256, shuffle=False)
 
-    train_data_0 = np.reshape(train_data_0, [train_data_0.shape[0], 768])
-    train_data_1 = np.reshape(train_data_1, [train_data_1.shape[0], 768])
+#     # z_0 = np.empty((0,z_dim), float)
+#     # z_1 = np.empty((0,z_dim), float)
 
-    tensor_data_0 = torch.from_numpy(train_data_0) # transform to torch tensor
-    data_0_dataset = TensorDataset(tensor_data_0)
-    tensor_data_1 = torch.from_numpy(train_data_1) # transform to torch tensor
-    data_1_dataset = TensorDataset(tensor_data_1)
-    train_0_loader = torch.utils.data.DataLoader(data_0_dataset, batch_size=256, shuffle=False)
-    train_1_loader = torch.utils.data.DataLoader(data_1_dataset, batch_size=256, shuffle=False)
+#     # for batch_idx, (train_x) in enumerate(train_0_loader):
+#     #     train_x= Variable(train_x[0])
+#     #     if(usecuda):
+#     #         train_x = train_x.cuda(idgpu)
+#     #     z = encodermodel(train_x)[0]
+#     #     z_0 = np.append(z_0, z.data.cpu(), axis=0)
 
-    z_0 = np.empty((0,z_dim), float)
-    z_1 = np.empty((0,z_dim), float)
+#     # for batch_idx, (train_x) in enumerate(train_1_loader):
+#     #     train_x= Variable(train_x[0])
+#     #     if(usecuda):
+#     #         train_x = train_x.cuda(idgpu)
+#     #     z = encodermodel(train_x)[0]
+#     #     z_1 = np.append(z_1, z.data.cpu(), axis=0)
 
-    for batch_idx, (train_x) in enumerate(train_0_loader):
-        train_x= Variable(train_x[0])
-        if(usecuda):
-            train_x = train_x.cuda(idgpu)
-        z = encodermodel(train_x)[0]
-        z_0 = np.append(z_0, z.data.cpu(), axis=0)
+#     # z_train_0 = z_0
+#     # z_train_1 = z_1
 
-    for batch_idx, (train_x) in enumerate(train_1_loader):
-        train_x= Variable(train_x[0])
-        if(usecuda):
-            train_x = train_x.cuda(idgpu)
-        z = encodermodel(train_x)[0]
-        z_1 = np.append(z_1, z.data.cpu(), axis=0)
+#     # Latent_means[activity, 0, :] = np.mean(z_train_0, axis=0)
+#     # Latent_means[activity, 1, :] = np.mean(z_train_1, axis=0)
+#     Latent_means = np.load('/home/omid/pycharm/Mobi/latents.npy')
+#     # Testing
+#     train_data = x_test
+#     act_train_labels = activity_test_label
+#     gen_train_labels = gender_test_label
+#     # activity_index = 0
+#     train_data = train_data[act_train_labels[:, activity] == 1]
+#     gen_train_labels = gen_train_labels[act_train_labels[:, activity] == 1]
+#     act_train_labels = act_train_labels[act_train_labels[:, activity] == 1]
+#     ### Manipulation at the Gender Level
+#     train_data_0 = train_data[gen_train_labels == 0]
+#     act_train_labels_0 = act_train_labels[gen_train_labels == 0]
+#     train_data_1 = train_data[gen_train_labels == 1]
+#     act_train_labels_1 = act_train_labels[gen_train_labels == 1]
+#     gender_train_data_0 = np.zeros((train_data_0.shape[0]))
+#     gender_train_data_1 = np.ones((train_data_1.shape[0]))
 
-    z_train_0 = z_0
-    z_train_1 = z_1
+#     eval_act_model = load_model("activity_model_DC.hdf5")
+#     eval_gen_model = load_model("gender_model_DC.hdf5")
 
-    Latent_means[activity, 0, :] = np.mean(z_train_0, axis=0)
-    Latent_means[activity, 1, :] = np.mean(z_train_1, axis=0)
+#     # X = np.reshape(hat_train_data, (hat_train_data.shape[0], 2, 128, 1))
+#     train_data = np.reshape(train_data, [train_data.shape[0], train_data.shape[1], train_data.shape[2],train_data.shape[3]])
+#     X = train_data
+#     Y = act_train_labels
+#     print("Activity Identification for Gender 0")
+#     print_results(eval_act_model, X, Y)
 
-    # Testing
-    train_data = x_test
-    act_train_labels = activity_test_label
-    gen_train_labels = gender_test_label
-    # activity_index = 0
-    train_data = train_data[act_train_labels[:, activity] == 1]
-    gen_train_labels = gen_train_labels[act_train_labels[:, activity] == 1]
-    act_train_labels = act_train_labels[act_train_labels[:, activity] == 1]
-    ### Manipulation at the Gender Level
-    train_data_0 = train_data[gen_train_labels == 0]
-    act_train_labels_0 = act_train_labels[gen_train_labels == 0]
-    train_data_1 = train_data[gen_train_labels == 1]
-    act_train_labels_1 = act_train_labels[gen_train_labels == 1]
-    gender_train_data_0 = np.zeros((train_data_0.shape[0]))
-    gender_train_data_1 = np.ones((train_data_1.shape[0]))
+#     # X = np.reshape(hat_train_data, (hat_train_data.shape[0], 2, 128, 1))
+#     Y = gen_train_labels
+#     result1 = eval_gen_model.evaluate(X, Y)
+#     act_acc = round(result1[1], 4) * 100
+#     print("***[RESULT]***Original: GEN Train Accuracy Gender 0: " + str(act_acc))
 
-    eval_act_model = load_model("activity_model_DC.hdf5")
-    eval_gen_model = load_model("gender_model_DC.hdf5")
+#     train_data_0 = np.reshape(train_data_0, [train_data_0.shape[0], 768])
+#     train_data_1 = np.reshape(train_data_1, [train_data_1.shape[0], 768])
 
-    # X = np.reshape(hat_train_data, (hat_train_data.shape[0], 2, 128, 1))
-    train_data = np.reshape(train_data, [train_data.shape[0], train_data.shape[1], train_data.shape[2],train_data.shape[3]])
-    X = train_data
-    Y = act_train_labels
-    print("Activity Identification for Gender 0")
-    print_results(eval_act_model, X, Y)
+#     tensor_data_0 = torch.from_numpy(train_data_0) # transform to torch tensor
+#     data_0_dataset = TensorDataset(tensor_data_0)
+#     tensor_data_1 = torch.from_numpy(train_data_1) # transform to torch tensor
+#     data_1_dataset = TensorDataset(tensor_data_1)
+#     train_0_loader = torch.utils.data.DataLoader(data_0_dataset, batch_size=256, shuffle=False)
+#     train_1_loader = torch.utils.data.DataLoader(data_1_dataset, batch_size=256, shuffle=False)
 
-    # X = np.reshape(hat_train_data, (hat_train_data.shape[0], 2, 128, 1))
-    Y = gen_train_labels
-    result1 = eval_gen_model.evaluate(X, Y)
-    act_acc = round(result1[1], 4) * 100
-    print("***[RESULT]***Original: GEN Train Accuracy Gender 0: " + str(act_acc))
+#     z_0 = np.empty((0,z_dim), float)
+#     z_1 = np.empty((0,z_dim), float)
 
-    train_data_0 = np.reshape(train_data_0, [train_data_0.shape[0], 768])
-    train_data_1 = np.reshape(train_data_1, [train_data_1.shape[0], 768])
+#     for batch_idx, (train_x) in enumerate(train_0_loader):
+#         train_x= Variable(train_x[0])
+#         if(usecuda):
+#             train_x = train_x.cuda(idgpu)
+#         z = encodermodel(train_x)[0]
+#         z_0 = np.append(z_0, z.data.cpu(), axis=0)
 
-    tensor_data_0 = torch.from_numpy(train_data_0) # transform to torch tensor
-    data_0_dataset = TensorDataset(tensor_data_0)
-    tensor_data_1 = torch.from_numpy(train_data_1) # transform to torch tensor
-    data_1_dataset = TensorDataset(tensor_data_1)
-    train_0_loader = torch.utils.data.DataLoader(data_0_dataset, batch_size=256, shuffle=False)
-    train_1_loader = torch.utils.data.DataLoader(data_1_dataset, batch_size=256, shuffle=False)
+#     for batch_idx, (train_x) in enumerate(train_1_loader):
+#         train_x= Variable(train_x[0])
+#         if(usecuda):
+#             train_x = train_x.cuda(idgpu)
+#         z = encodermodel(train_x)[0]
+#         z_1 = np.append(z_1, z.data.cpu(), axis=0)
 
-    z_0 = np.empty((0,z_dim), float)
-    z_1 = np.empty((0,z_dim), float)
+#     z_train_0 = z_0
+#     z_train_1 = z_1
 
-    for batch_idx, (train_x) in enumerate(train_0_loader):
-        train_x= Variable(train_x[0])
-        if(usecuda):
-            train_x = train_x.cuda(idgpu)
-        z = encodermodel(train_x)[0]
-        z_0 = np.append(z_0, z.data.cpu(), axis=0)
+#     # mean_0 = np.mean(z_train_0, axis=0)
+#     # mean_1 = np.mean(z_train_1, axis=0)
+#     z_train_0 = z_train_0 - Latent_means[activity, 0, :] + Latent_means[activity, 1, :]
+#     z_train_1 = z_train_1 - Latent_means[activity, 1, :] + Latent_means[activity, 0, :]
 
-    for batch_idx, (train_x) in enumerate(train_1_loader):
-        train_x= Variable(train_x[0])
-        if(usecuda):
-            train_x = train_x.cuda(idgpu)
-        z = encodermodel(train_x)[0]
-        z_1 = np.append(z_1, z.data.cpu(), axis=0)
+#     tensor_z_0 = torch.from_numpy(z_train_0) # transform to torch tensor
+#     y_0_dataset = np.zeros((gender_train_data_0.shape[0], 2))
+#     for i in range(gender_train_data_0.shape[0]):
+#         y_0_dataset[i, 1] = 1
+#     tensor_y_0 = torch.from_numpy(y_0_dataset)
 
-    z_train_0 = z_0
-    z_train_1 = z_1
+#     tensor_z_1 = torch.from_numpy(z_train_1) # transform to torch tensor
+#     y_1_dataset = np.zeros((gender_train_data_1.shape[0], 2))
+#     for i in range(gender_train_data_1.shape[0]):
+#         y_1_dataset[i, 0] = 1
+#     tensor_y_1 = torch.from_numpy(y_1_dataset)
 
-    # mean_0 = np.mean(z_train_0, axis=0)
-    # mean_1 = np.mean(z_train_1, axis=0)
-    z_train_0 = z_train_0 - Latent_means[activity, 0, :] + Latent_means[activity, 1, :]
-    z_train_1 = z_train_1 - Latent_means[activity, 1, :] + Latent_means[activity, 0, :]
+#     z_0_dataset = TensorDataset(tensor_z_0, tensor_y_0)
+#     z_1_dataset = TensorDataset(tensor_z_1, tensor_y_1)
 
-    tensor_z_0 = torch.from_numpy(z_train_0) # transform to torch tensor
-    y_0_dataset = np.zeros((gender_train_data_0.shape[0], 2))
-    for i in range(gender_train_data_0.shape[0]):
-        y_0_dataset[i, 1] = 1
-    tensor_y_0 = torch.from_numpy(y_0_dataset)
+#     z_0_loader = torch.utils.data.DataLoader(z_0_dataset, batch_size=256, shuffle=False)
+#     z_1_loader = torch.utils.data.DataLoader(z_1_dataset, batch_size=256, shuffle=False)
 
-    tensor_z_1 = torch.from_numpy(z_train_1) # transform to torch tensor
-    y_1_dataset = np.zeros((gender_train_data_1.shape[0], 2))
-    for i in range(gender_train_data_1.shape[0]):
-        y_1_dataset[i, 0] = 1
-    tensor_y_1 = torch.from_numpy(y_1_dataset)
+#     hat_train_data_0 = np.empty((0,768), float)
+#     hat_train_data_1 = np.empty((0,768), float)
 
-    z_0_dataset = TensorDataset(tensor_z_0, tensor_y_0)
-    z_1_dataset = TensorDataset(tensor_z_1, tensor_y_1)
+#     for batch_idx, (z, y) in enumerate(z_0_loader):
+#         z = Variable(z)
+#         y = Variable(y)
+#         if(use_gpu):
+#             z = z.cuda(idgpu)
+#             y = y.cuda(idgpu)
+#         # z_cat = torch.cat((z, y), dim=1)
+#         x_hat = decodermodel(z)
+#         hat_train_data_0 = np.append(hat_train_data_0, x_hat.data.cpu(), axis=0)
 
-    z_0_loader = torch.utils.data.DataLoader(z_0_dataset, batch_size=256, shuffle=False)
-    z_1_loader = torch.utils.data.DataLoader(z_1_dataset, batch_size=256, shuffle=False)
+#     for batch_idx, (z, y) in enumerate(z_1_loader):
+#         z = Variable(z)
+#         y = Variable(y)
+#         if(use_gpu):
+#             z = z.cuda(idgpu)
+#             y = y.cuda(idgpu)
+#         # z_cat = torch.cat((z, y), dim=1)
+#         x_hat = decodermodel(z)
+#         hat_train_data_1 = np.append(hat_train_data_1, x_hat.data.cpu(), axis=0)
 
-    hat_train_data_0 = np.empty((0,768), float)
-    hat_train_data_1 = np.empty((0,768), float)
+#     hat_train_data = np.concatenate((hat_train_data_0, hat_train_data_1), axis=0)
+#     hat_act_train_labels = np.concatenate((act_train_labels_0, act_train_labels_1), axis=0)
+#     hat_gen_train_labels = np.concatenate((gender_train_data_0, gender_train_data_1), axis=0)
 
-    for batch_idx, (z, y) in enumerate(z_0_loader):
-        z = Variable(z)
-        y = Variable(y)
-        if(use_gpu):
-            z = z.cuda(idgpu)
-            y = y.cuda(idgpu)
-        # z_cat = torch.cat((z, y), dim=1)
-        x_hat = decodermodel(z)
-        hat_train_data_0 = np.append(hat_train_data_0, x_hat.data.cpu(), axis=0)
+#     eval_act_model = load_model("activity_model_DC.hdf5")
+#     eval_gen_model = load_model("gender_model_DC.hdf5")
 
-    for batch_idx, (z, y) in enumerate(z_1_loader):
-        z = Variable(z)
-        y = Variable(y)
-        if(use_gpu):
-            z = z.cuda(idgpu)
-            y = y.cuda(idgpu)
-        # z_cat = torch.cat((z, y), dim=1)
-        x_hat = decodermodel(z)
-        hat_train_data_1 = np.append(hat_train_data_1, x_hat.data.cpu(), axis=0)
+#     # X = np.reshape(hat_train_data, (hat_train_data.shape[0], 2, 128, 1))
+#     reconstructed_input = np.reshape(hat_train_data, [train_data.shape[0], train_data.shape[1], train_data.shape[2],train_data.shape[3]])
+#     X = reconstructed_input
+#     Y = hat_act_train_labels
+#     print("Activity Identification for Gender 0")
+#     print_results(eval_act_model, X, Y)
 
-    hat_train_data = np.concatenate((hat_train_data_0, hat_train_data_1), axis=0)
-    hat_act_train_labels = np.concatenate((act_train_labels_0, act_train_labels_1), axis=0)
-    hat_gen_train_labels = np.concatenate((gender_train_data_0, gender_train_data_1), axis=0)
-
-    eval_act_model = load_model("activity_model_DC.hdf5")
-    eval_gen_model = load_model("gender_model_DC.hdf5")
-
-    # X = np.reshape(hat_train_data, (hat_train_data.shape[0], 2, 128, 1))
-    reconstructed_input = np.reshape(hat_train_data, [train_data.shape[0], train_data.shape[1], train_data.shape[2],train_data.shape[3]])
-    X = reconstructed_input
-    Y = hat_act_train_labels
-    print("Activity Identification for Gender 0")
-    print_results(eval_act_model, X, Y)
-
-    # X = np.reshape(hat_train_data, (hat_train_data.shape[0], 2, 128, 1))
-    Y = hat_gen_train_labels
-    result1 = eval_gen_model.evaluate(X, Y)
-    act_acc = round(result1[1], 4) * 100
-    print("***[RESULT]***Original: GEN Train Accuracy Gender 0: " + str(act_acc))
+#     # X = np.reshape(hat_train_data, (hat_train_data.shape[0], 2, 128, 1))
+#     Y = hat_gen_train_labels
+#     result1 = eval_gen_model.evaluate(X, Y)
+#     act_acc = round(result1[1], 4) * 100
+#     print("***[RESULT]***Original: GEN Train Accuracy Gender 0: " + str(act_acc))
 
 encodermodel_0 = Encoder().double()
 encodermodel_0.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/single_vae_encoder_all'+str(z_dim)+'gender'))
@@ -511,6 +509,8 @@ decodermodel_0 = Decoder().double()
 decodermodel_0.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/single_vae_decoder_all'+str(z_dim)+'gender'))
 if usecuda:
     decodermodel_0.cuda(idgpu)
+
+latent_means = np.load('/home/omid/pycharm/Mobi/latents.npy')
 
 for activity in range(4):
     print()
