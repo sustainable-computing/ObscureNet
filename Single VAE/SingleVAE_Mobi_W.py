@@ -22,6 +22,7 @@ from keras.utils import to_categorical
 from sklearn.model_selection import train_test_split
 import pandas as pd
 from torch.nn import functional as F
+from torchsummary import summary
 
 #Pytorch models
 import torch
@@ -652,6 +653,9 @@ decodermodel_0 = Decoder().double()
 decodermodel_0.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/single_vae_decoder_all'+str(z_dim)))
 if usecuda:
     decodermodel_0.cuda(idgpu)
+
+print(encodermodel_0)
+print(decodermodel_0)
 
 for activity in range(4):
     print("This is the current activity")
