@@ -42,10 +42,8 @@ def to_var(x):
 usecuda = True
 use_gpu = True
 idgpu = 0
-x_dim = 2
-AI = 0 #Activity Index
-zed = [5]
-ma_rate = 0.001
+x_dim = 2 #Dimension of added Condition Variable
+zed = [5] #Latent variable size
 
 for z_dim in zed:
     class Encoder(nn.Module):
@@ -167,8 +165,6 @@ for z_dim in zed:
                 gen_train[i, 1] = 1
 
         tensor_x = torch.from_numpy(x_vae.astype('float32')) # transform to torch tensor
-        # tensor_y = torch.Tensor(my_y)
-        # tensor_y = torch.from_numpy(gen_vae)
         tensor_y = torch.from_numpy(gen_train.astype('float32'))
 
         vae_dataset = TensorDataset(tensor_x, tensor_y)
@@ -183,6 +179,7 @@ for z_dim in zed:
 
         optimizerencoder = optim.Adam(encodermodel.parameters())
         optimizerdecoder = optim.Adam(decodermodel.parameters())
+        #Uncomment for Training
 '''
         for i in range(40):
             for batch_idx, (train_x, train_y) in enumerate(train_loader):
@@ -224,8 +221,6 @@ def print_results(M, X, Y):
     print(result1)
     act_acc = round(result1[1], 4) * 100
     print("***[RESULT]*** ACT Accuracy: " + str(act_acc))
-
-Latent_means = np.zeros((5, 2, z_dim))
 
 act_label = 0
 gen_label = 0
@@ -317,6 +312,7 @@ decodermodel_3.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/multi_
 if usecuda:
     decodermodel_3.cuda(idgpu)
 
+#Used for F1-scores
 ACT_LABELS = ["dws","ups", "wlk", "jog", "std"]
 TRIAL_CODES = {
     ACT_LABELS[0]:[1,2,11],
@@ -378,6 +374,7 @@ def print_gen_results_f1_score(M, X, Y):
     f1act = f1_score(np.argmax(Y_two_d, axis=1), preds_two_d, average=None).mean()
     print("***[RESULT]*** Gender Averaged F-1 Score : "+str(f1act*100))
 
+#Load data and perform Condition Manipulation of the test data
 for activity in range(4):
     print("This is the current activity")
     print(activity)
@@ -509,14 +506,11 @@ for activity in range(4):
     X_all = np.append(X_all, X, axis=0)
     Y_all_act = np.append(Y_all_act, Y, axis=0)
 
-    # X = np.reshape(hat_train_data, (hat_train_data.shape[0], 2, 128, 1))
     Y = hat_gen_data
     result1 = eval_gen_model.evaluate(X, Y)
     act_acc = round(result1[1], 4) * 100
     print("Gender Identification: " + str(act_acc))
     Y_all_gen = np.append(Y_all_gen, Y, axis=0)
 
-# result1 = eval_act_model.evaluate(X_all, Y_all_act)
 print_act_results_f1_score(eval_act_model, X_all, Y_all_act)
-# result1 = eval_gen_model.evaluate(X_all, Y_all_gen)
 print_gen_results_f1_score(eval_gen_model, X_all, Y_all_gen)
