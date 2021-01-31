@@ -1,3 +1,5 @@
+'''Keras code in someparts is borrowed from https://github.com/mmalekzadeh/motion-sense '''
+
 import os
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID";
@@ -152,12 +154,10 @@ def eval_act(X, Y, act_class_numbers=5, fm=(2, 5), ep=10):
     early_stop = keras.callbacks.EarlyStopping(monitor=eval_metric, mode='max', patience=20)
     checkpoint = ModelCheckpoint(filepath, monitor=eval_metric, verbose=0, save_best_only=True, mode='max')
     callbacks_list = [early_stop, checkpoint]
-    # eval_act = Estimator.build(height, width, act_class_numbers, name="EVAL_ACT", fm=fm, act_func="softmax",
-    #                            hid_act_func="relu")
+
     eval_act = Estimator.build(height, width, act_class_numbers, name="EVAL_ACT", fm=fm, act_func="softmax",
                                    hid_act_func="relu")
     eval_act.compile(loss="categorical_crossentropy", optimizer='adam', metrics=['acc'])
-    # X, Y = shuffle(X, Y)
     eval_act.fit(X, Y,
                  validation_split=.1,
                  epochs=ep,
@@ -165,7 +165,6 @@ def eval_act(X, Y, act_class_numbers=5, fm=(2, 5), ep=10):
                  shuffle=True,
                  verbose=2,
                  class_weight=get_class_weights(np.argmax(Y, axis=1))
-                 # callbacks=callbacks_list
                  )
 
     eval_act.compile(loss="categorical_crossentropy", optimizer='adam', metrics=['acc'])
@@ -181,12 +180,10 @@ def eval_gen(X, Y, gen_class_numbers=1, fm=(2, 5), ep=10, File="gender_model_DC.
     filepath = File
     checkpoint = ModelCheckpoint(filepath, monitor=eval_metric, verbose=2, save_best_only=True, mode='max')
     callbacks_list = [early_stop, checkpoint]
-    # eval_gen = Estimator.build(height, width, gen_class_numbers, name="EVAL_GEN", fm=fm, act_func="sigmoid",
-    #                            hid_act_func="relu")
+
     eval_gen = Estimator.build(height, width, gen_class_numbers, name="EVAL_GEN", fm=fm, act_func="sigmoid",
                                    hid_act_func="relu")
     eval_gen.compile(loss="binary_crossentropy", optimizer='adam', metrics=['acc'])
-    # X, Y = shuffle(X, Y)
     eval_gen.fit(X, Y,
                  epochs=ep,
                  batch_size=512,
@@ -290,42 +287,28 @@ class DataSampler(object):
             return self.next_batch(batch_size, self.train_data, self.train_labels)
         else:
             return self.next_batch(batch_size, self.train_data, self.train_labels)[0]
-
     def w_all_train(self):
         return self.w_train_data
-
     def w_all_train_gender(self):
         return self.w_gen_train_labels
-
     def w_all_test(self):
         return self.w_test_data
-
     def get_act_test(self):
         return self.act_test
-
     def get_act_train(self):
         return self.act_train
-
     def w_all_test_gender(self):
         return self.w_gen_test_labels
-
     def all_train(self):
         return self.train_data
-
     def all_train_labels(self):
-        # print(self.act_train_labels.shape)
-        # print(self.gen_train_labels.shape)
         return self.act_train_labels
-
     def all_gender_train_labels(self):
         return self.gen_train_labels
-
     def all_gender_test_labels(self):
         return self.gen_test_labels
-
     def all_test(self):
         return self.test_data
-
     def all_test_labels(self):
         return self.act_test_labels
 
@@ -339,21 +322,6 @@ def train_estimators():
     act_train_labels = DS.all_train_labels()
     act_train = DS.get_act_train()
     act_test = DS.get_act_test()
-    # train_data = np.reshape(train_data, (train_data.shape[0], 2, 128, 1))
-
-    # train_data_added = train_data[act_train_labels[:, 0] == 1]
-    # train_data = np.concatenate((train_data, train_data_added), axis=0)
-    # train_data_added = gen_train_labels[act_train_labels[:, 0] == 1]
-    # gen_train_labels = np.concatenate((gen_train_labels, train_data_added), axis=0)
-    # train_data_added = act_train_labels[act_train_labels[:, 0] == 1]
-    # act_train_labels = np.concatenate((act_train_labels, train_data_added), axis=0)
-    #
-    # train_data_added = train_data[act_train_labels[:, 0] == 1]
-    # train_data = np.concatenate((train_data, train_data_added), axis=0)
-    # train_data_added = gen_train_labels[act_train_labels[:, 0] == 1]
-    # gen_train_labels = np.concatenate((gen_train_labels, train_data_added), axis=0)
-    # train_data_added = act_train_labels[act_train_labels[:, 0] == 1]
-    # act_train_labels = np.concatenate((act_train_labels, train_data_added), axis=0)
     train_data_all = train_data[
         np.logical_or.reduce((act_train == 0., act_train == 1., act_train == 2., act_train == 3.))]
     gen_train_labels_all = gen_train_labels[
@@ -361,9 +329,6 @@ def train_estimators():
     act_train_labels_all = act_train_labels[
         np.logical_or.reduce((act_train == 0., act_train == 1., act_train == 2., act_train == 3.))]
     train_data_all = np.reshape(train_data_all, (train_data_all.shape[0], 2, 128, 1))
-    # if Gen == True:
-    #     eval_gen(x, y, File="eval_gen_test.hdf5")
-    # else:
     eval_gen(train_data_all, gen_train_labels_all)
     eval_act(train_data_all, act_train_labels_all)
 
@@ -411,10 +376,8 @@ def to_var(x):
 usecuda = True
 use_gpu = True
 idgpu = 0
-x_dim = 2
-AI = 0 #Activity Index
-zed = [10]
-ma_rate = 0.001
+x_dim = 2 #Dimension of added Condition Variable
+zed = [10] #Latent variable size
 
 for z_dim in zed:
     class Encoder(nn.Module):
@@ -480,7 +443,7 @@ for z_dim in zed:
         def loss(self, pred, target):
             return F.nll_loss(pred, target)
     
-    for activity in range(4):#[AI]:
+    for activity in range(4):
         DS = DataSampler()
         x_train = DS.all_train()
         y_train = DS.all_train_labels()
@@ -496,7 +459,6 @@ for z_dim in zed:
         gen_train_labels = gen_train_labels[act_train_labels[:, activity_index]==1]
         act_train_labels = act_train_labels[act_train_labels[:, activity_index]==1]
         act_train = act_train[act_train == activity_index]
-        # x_train = x_train[np.logical_or.reduce((act_train == 0., act_train == 1., act_train == 2., act_train == 3.))]
                 
         y_train = np.zeros((gen_train_labels.shape[0], 2))
         for i in range(gen_train_labels.shape[0]):
@@ -584,6 +546,7 @@ def print_results(M, X, Y):
 
 Latent_means = np.zeros((5, 2, z_dim))
 
+#Used for F1-score
 ACT_LABELS = ["dws","ups", "wlk", "jog", "std"]
 TRIAL_CODES = {
     ACT_LABELS[0]:[1,2,11],
@@ -679,17 +642,16 @@ decodermodel_3 = Decoder().double()
 decodermodel_3.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/obs_motion_g_decoder_alpha_02_beta_2_3'+str(z_dim)))
 if usecuda:
     decodermodel_3.cuda(idgpu)
-    
+
+#Load data and perform Condition Manipulation of the test data
 for activity_index in range(4):
     print("This is the current activity")
     print(activity_index)
-    # TESTing
     # Testing
     train_data = DS.all_test()
     act_train_labels = DS.all_test_labels()
     gen_train_labels = DS.all_gender_test_labels()
     act_train = DS.get_act_test()
-    # activity_index = 0
     train_data = train_data[act_train_labels[:, activity_index]==1]
     gen_train_labels = gen_train_labels[act_train_labels[:, activity_index]==1]
     act_train_labels = act_train_labels[act_train_labels[:, activity_index]==1]
@@ -698,13 +660,11 @@ for activity_index in range(4):
     eval_act_model = load_model("activity_model_mlp.hdf5")
     eval_gen_model = load_model("gender_model_mlp.hdf5")
 
-    # X = np.reshape(train_data, (train_data.shape[0], 2, 128, 1))
     X = train_data
     Y = act_train_labels
     print("Activity Identification for Gender 0")
     print_results(eval_act_model, X, Y)
 
-    # X = np.reshape(hat_train_data, (hat_train_data.shape[0], 2, 128, 1))
     Y = gen_train_labels
     result1 = eval_gen_model.evaluate(X, Y)
     act_acc = round(result1[1], 4) * 100
@@ -736,8 +696,7 @@ for activity_index in range(4):
         X_inside = train_data[pred_act[:, act_inside] == 1]
         Y_gen_inside = pred_gen[pred_act[:, act_inside] == 1]
         Y_test_gen = gen_train_labels[pred_act[:, act_inside] == 1]
-        print(Y_act_inside.shape)
-        
+                
         if Y_act_inside != []:
             if act_inside == 0:
                 encodermodel = encodermodel_0
@@ -780,7 +739,6 @@ for activity_index in range(4):
                 if(usecuda):
                     x = x.cuda(idgpu)
                     y = y.cuda(idgpu)
-                # x_cat = torch.cat((x, y), dim=1)
                 z_e = encodermodel(x)[0]
                 z = np.append(z, z_e.data.cpu(), axis=0)
 
@@ -808,7 +766,7 @@ for activity_index in range(4):
                 x_hat = decodermodel(z_cat)
                 hat_train_data = np.append(hat_train_data, x_hat.data.cpu(), axis=0)
             hat_gen_data = np.append(hat_gen_data, Y_test_gen, axis=0)
-    # X = np.reshape(hat_train_data, (hat_train_data.shape[0], 2, 128, 1))
+
     reconstructed_input = hat_train_data
     X = reconstructed_input
     Y = act_train_labels

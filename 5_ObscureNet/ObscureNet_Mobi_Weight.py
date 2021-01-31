@@ -1,3 +1,5 @@
+'''Keras code in someparts is borrowed from https://github.com/mmalekzadeh/motion-sense '''
+
 import numpy as np
 import os
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID";
@@ -42,10 +44,8 @@ def to_var(x):
 usecuda = True
 use_gpu = True
 idgpu = 0
-x_dim = 3
-AI = 1 #Activity Index
-zed = [5]
-ma_rate = 0.001
+x_dim = 3 #Dimension of added Condition Variable
+zed = [5] #Latent variable size
 
 for z_dim in zed:
     class Encoder(nn.Module):
@@ -91,38 +91,6 @@ for z_dim in zed:
             h4 = self.relu(self.fc4(h3))
             h5 = self.fc5(h4)
             return h5
-
-    class LatentSmoothing(nn.Module):
-        def __init__(self):
-            super(LatentSmoothing, self).__init__()
-            self.fc1 = nn.Linear(z_dim, 2)
-            self.softmax = nn.Softmax()
-
-        def forward(self,x):
-            h1 = self.fc1(x)
-            return h1
-
-    class Mine(nn.Module):
-        def __init__(self, z_size=z_dim, gender_size=1, output_size=1, hidden_size=128):
-            super().__init__()
-            self.fc1_noise = nn.Linear(z_size, hidden_size, bias=False)
-            self.fc1_sample = nn.Linear(gender_size, hidden_size, bias=False)
-            self.fc1_bias = nn.Parameter(torch.zeros(hidden_size))
-            self.fc2 = nn.Linear(hidden_size, hidden_size)
-            self.fc3 = nn.Linear(hidden_size, output_size)
-            self.ma_et = None
-            for m in self.modules():
-                if isinstance(m, nn.Linear):
-                    nn.init.kaiming_normal_(m.weight)
-                    if m.bias is not None:
-                        nn.init.constant_(m.bias, 0.0)
-        def forward(self, z, gender):
-            x_z = self.fc1_noise(z)
-            x_gender = self.fc1_sample(gender)
-            x = F.leaky_relu(x_z + x_gender + self.fc1_bias, negative_slope=2e-1)
-            x = F.leaky_relu(self.fc2(x), negative_slope=2e-1)
-            x = F.leaky_relu(self.fc3(x), negative_slope=2e-1)
-            return x
     
     class AUX(nn.Module):
         def __init__(self, nz, numLabels=3):
@@ -142,20 +110,6 @@ for z_dim in zed:
             return self.infer_y_from_z(z)
         def loss(self, pred, target):
             return F.nll_loss(pred, target)
-    
-    def compute_kernel(x, y):
-        x_size = x.shape[0]
-        y_size = y.shape[0]
-        dim = x.shape[1]
-        tiled_x = x.view(x_size,1,dim).repeat(1, y_size,1)
-        tiled_y = y.view(1,y_size,dim).repeat(x_size, 1,1)
-        return torch.exp(-torch.mean((tiled_x - tiled_y)**2,dim=2)/dim*1.0)
-
-    def compute_mmd(x, y):
-        x_kernel = compute_kernel(x, x)
-        y_kernel = compute_kernel(y, y)
-        xy_kernel = compute_kernel(x, y)
-        return torch.mean(x_kernel) + torch.mean(y_kernel) - 2*torch.mean(xy_kernel)
 
     data_subjects = pd.read_csv("/home/omid/pycharm/Mobi/data_subjects.csv")
     data = np.load("Data/total_data.npy", allow_pickle=True)
@@ -248,7 +202,7 @@ for z_dim in zed:
     x_train = data_train.reshape((data_train.shape[0], data_train.shape[1], data_train.shape[2], 1))
     x_test = data_test.reshape((data_test.shape[0], data_test.shape[1], data_test.shape[2], 1))
 
-    for activity in [0, 2, 3]:
+    for activity in range(4):
 
         x_vae = x_train[activity_train_label[:, activity] == 1]
         act_vae = activity_train_label[activity_train_label[:, activity] == 1]
@@ -277,6 +231,7 @@ for z_dim in zed:
         optimizerencoder = optim.Adam(encodermodel.parameters())
         optimizerdecoder = optim.Adam(decodermodel.parameters())
         optimizer_aux = optim.Adam(aux.parameters())
+        #Uncomment for Training
 '''
         for i in range(200):
             for batch_idx, (train_x, train_y) in enumerate(train_loader):
@@ -320,16 +275,12 @@ for z_dim in zed:
                 optimizerdecoder.step()
 
                 if(batch_idx%100 == 0):
-                    # result1 = aux(train_z)
-                    # _, result1 = torch.max(result1.data, 1)
-                    # correct = (result1 == train_y).float().sum()
-                    # accuracy = 100 * correct / (train_z.shape[0])
-                    # print("***[RESULT]*** Aux results" + str(accuracy.data))
                     print("Epoch %d : MSE is %f, KLD loss is %f, AUX loss is %f" % (i,recons_loss.data, kld_loss.data, auxLoss.data))
         
         torch.save(encodermodel.state_dict(), '/home/omid/pycharm/Mobi/models/obs_mobi_w_encoder_alpha_02_beta_2_'+str(activity)+str(z_dim))
         torch.save(decodermodel.state_dict(), '/home/omid/pycharm/Mobi/models/obs_mobi_w_decoder_alpha_02_beta_2_'+str(activity)+str(z_dim))
 '''
+
 def print_results(M, X, Y):
     result1 = M.evaluate(X, Y, verbose=2)
     print(result1)
@@ -473,6 +424,7 @@ def print_weight_results_f1_score(M, X, Y):
     f1act = f1_score(np.argmax(Y, axis=1), preds, average=None).mean()
     print("***[RESULT]*** Weight Averaged F-1 Score : "+str(f1act*100))
 
+#Load data and perform Condition Manipulation of the test data
 for activity in range(4):
     print("This is the current activity")
     print(activity)
@@ -484,7 +436,6 @@ for activity in range(4):
     age_train_labels = age_test_label
     weight_train_labels = weight_test_label
 
-    # activity_index = 0
     train_data = train_data[act_train_labels[:, activity] == 1]
     gen_train_labels = gen_train_labels[act_train_labels[:, activity] == 1]
     age_train_labels = age_train_labels[act_train_labels[:, activity] == 1]
@@ -499,7 +450,6 @@ for activity in range(4):
     Y = act_train_labels
     print("Activity Identification for Gender 0")
     print_results(eval_act_model, X, Y)
-    # X = np.reshape(hat_train_data, (hat_train_data.shape[0], 2, 128, 1))
     Y = weight_train_labels
     result1 = eval_weight_model.evaluate(X, Y)
     act_acc = round(result1[1], 4) * 100
@@ -575,7 +525,6 @@ for activity in range(4):
                 if(usecuda):
                     x = x.cuda(idgpu)
                     y = y.cuda(idgpu)
-                # x_cat = torch.cat((x, y), dim=1)
                 z_e = encodermodel(x)[0]
                 z = np.append(z, z_e.data.cpu(), axis=0)
 
@@ -613,7 +562,6 @@ for activity in range(4):
     X_all = np.append(X_all, X, axis=0)
     Y_all_act = np.append(Y_all_act, Y, axis=0)
 
-    # X = np.reshape(hat_train_data, (hat_train_data.shape[0], 2, 128, 1))
     Y = hat_wght_data
     result1 = eval_weight_model.evaluate(X, Y)
     act_acc = round(result1[1], 4) * 100
