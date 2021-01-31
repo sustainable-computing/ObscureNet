@@ -1,7 +1,7 @@
+'''Keras code in someparts is borrowed from https://github.com/mmalekzadeh/motion-sense '''
+
 import os
-
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID";
-
 # The GPU id to use, usually either "0" or "1";
 os.environ["CUDA_VISIBLE_DEVICES"] = "2";
 from keras.layers import Reshape, Lambda
@@ -33,7 +33,6 @@ def get_class_weights(y):
     majority = max(counter.values())
     return {cls: float(majority / count) for cls, count in counter.items()}
 
-
 ACT_LABELS = ["dws", "ups", "wlk", "jog", "std"]
 TRIAL_CODES = {
     ACT_LABELS[0]: [1, 2, 11],
@@ -45,17 +44,13 @@ TRIAL_CODES = {
 
 from keras.utils import to_categorical
 
-
 def sampling(args):
     """Reparameterization trick by sampling fr an isotropic unit Gaussian.
-
     # Arguments
         args (tensor): mean and log of variance of Q(z|X)
-
     # Returns
         z (tensor): sampled latent vector
     """
-
     z_mean, z_log_var = args
     batch = K.shape(z_mean)[0]
     dim = K.int_shape(z_mean)[1]
@@ -65,10 +60,8 @@ def sampling(args):
 
 def sampling_mean(z_mean, z_log_var):
     """Reparameterization trick by sampling fr an isotropic unit Gaussian.
-
     # Arguments
         args (tensor): mean and log of variance of Q(z|X)
-
     # Returns
         z (tensor): sampled latent vector
     """
@@ -81,7 +74,6 @@ def sampling_mean(z_mean, z_log_var):
 
 class Estimator:
     l2p = 0.001
-
     @staticmethod
     def early_layers(inp, fm, hid_act_func="relu"):
         # Start
@@ -97,9 +89,7 @@ class Estimator:
         x = BatchNormalization()(x)
         x = MaxPooling2D(pool_size=(1, 2))(x)
         x = Dropout(0.25)(x)
-
         return x
-
     @staticmethod
     def late_layers(inp, num_classes, fm, act_func="softmax", hid_act_func="relu", b_name="Identifier"):
         # 2
@@ -129,10 +119,8 @@ class Estimator:
         model = Model(inputs=inp, outputs=late, name=name)
         return model
 
-
 class Estimator_mlp:
     l2p = 0.001
-
     @staticmethod
     def early_layers(inp, fm, hid_act_func="relu"):
         x = Dense(512, activation="relu")(inp)
@@ -141,7 +129,6 @@ class Estimator_mlp:
         x = Dropout(0.5)(x)
         x = Dense(256, activation="relu")(x)
         return x
-
     @staticmethod
     def late_layers(inp, num_classes, fm, act_func="softmax", hid_act_func="relu", b_name="Identifier"):
         # 2
@@ -151,7 +138,6 @@ class Estimator_mlp:
         x = Dropout(0.5)(x)
         x = Dense(num_classes, activation=act_func, name=b_name)(x)
         return x
-
     @staticmethod
     def build(height, width, num_classes, name, fm, act_func="softmax", hid_act_func="relu"):
         inp = Input(shape=(256,))
@@ -160,12 +146,10 @@ class Estimator_mlp:
         model = Model(inputs=inp, outputs=late, name=name)
         return model
 
-
 def print_results(M, X, Y):
     result1 = M.evaluate(X, Y, verbose=2)
     act_acc = round(result1[1], 4) * 100
     print("***[RESULT]*** ACT Accuracy: " + str(act_acc))
-
 
 def eval_act(X, Y, act_class_numbers=5, fm=(2, 5), ep=200):
     height = 1
@@ -176,8 +160,6 @@ def eval_act(X, Y, act_class_numbers=5, fm=(2, 5), ep=200):
     early_stop = keras.callbacks.EarlyStopping(monitor=eval_metric, mode='max', patience=20)
     checkpoint = ModelCheckpoint(filepath, monitor=eval_metric, verbose=0, save_best_only=True, mode='max')
     callbacks_list = [early_stop, checkpoint]
-    # eval_act = Estimator.build(height, width, act_class_numbers, name="EVAL_ACT", fm=fm, act_func="softmax",
-    #                            hid_act_func="relu")
     eval_act = Estimator_mlp.build(height, width, act_class_numbers, name="EVAL_ACT", fm=fm, act_func="softmax",
                                    hid_act_func="relu")
     eval_act.compile(loss="categorical_crossentropy", optimizer='adam', metrics=['acc'])
@@ -189,7 +171,6 @@ def eval_act(X, Y, act_class_numbers=5, fm=(2, 5), ep=200):
                  shuffle=True,
                  verbose=1,
                  class_weight=get_class_weights(np.argmax(Y, axis=1))
-                 # callbacks=callbacks_list
                  )
 
     eval_act.compile(loss="categorical_crossentropy", optimizer='adam', metrics=['acc'])
@@ -206,12 +187,9 @@ def eval_gen(X, Y, gen_class_numbers=1, fm=(2, 5), ep=200, File="gender_model_ml
     filepath = File
     checkpoint = ModelCheckpoint(filepath, monitor=eval_metric, verbose=2, save_best_only=True, mode='max')
     callbacks_list = [early_stop, checkpoint]
-    # eval_gen = Estimator.build(height, width, gen_class_numbers, name="EVAL_GEN", fm=fm, act_func="sigmoid",
-    #                            hid_act_func="relu")
     eval_gen = Estimator_mlp.build(height, width, gen_class_numbers, name="EVAL_GEN", fm=fm, act_func="sigmoid",
                                    hid_act_func="relu")
     eval_gen.compile(loss="binary_crossentropy", optimizer='adam', metrics=['acc'])
-    # X, Y = shuffle(X, Y)
     eval_gen.fit(X, Y,
                  epochs=ep,
                  batch_size=512,
@@ -221,6 +199,7 @@ def eval_gen(X, Y, gen_class_numbers=1, fm=(2, 5), ep=200, File="gender_model_ml
     eval_gen.compile(loss="binary_crossentropy", optimizer='adam', metrics=['acc'])
     eval_gen.save(File)
 
+#Used for training of Inference Models
 def train_estimators(x, y, Gen=False):
     print("Training:")
     DS = DataSampler()
@@ -231,32 +210,15 @@ def train_estimators(x, y, Gen=False):
     act_train_labels = DS.all_train_labels()
     act_train = DS.get_act_train()
     act_test = DS.get_act_test()
-    # train_data = np.reshape(train_data, (train_data.shape[0], 2, 128, 1))
-
-    # train_data_added = train_data[act_train_labels[:, 0] == 1]
-    # train_data = np.concatenate((train_data, train_data_added), axis=0)
-    # train_data_added = gen_train_labels[act_train_labels[:, 0] == 1]
-    # gen_train_labels = np.concatenate((gen_train_labels, train_data_added), axis=0)
-    # train_data_added = act_train_labels[act_train_labels[:, 0] == 1]
-    # act_train_labels = np.concatenate((act_train_labels, train_data_added), axis=0)
-    #
-    # train_data_added = train_data[act_train_labels[:, 0] == 1]
-    # train_data = np.concatenate((train_data, train_data_added), axis=0)
-    # train_data_added = gen_train_labels[act_train_labels[:, 0] == 1]
-    # gen_train_labels = np.concatenate((gen_train_labels, train_data_added), axis=0)
-    # train_data_added = act_train_labels[act_train_labels[:, 0] == 1]
-    # act_train_labels = np.concatenate((act_train_labels, train_data_added), axis=0)
     train_data_gender = train_data[
         np.logical_or.reduce((act_train == 0., act_train == 1., act_train == 2., act_train == 3.))]
     gen_train_labels_gender = gen_train_labels[
         np.logical_or.reduce((act_train == 0., act_train == 1., act_train == 2., act_train == 3.))]
     act_train_labels_gender = act_train_labels[
         np.logical_or.reduce((act_train == 0., act_train == 1., act_train == 2., act_train == 3.))]
-    # train_data_gender = np.reshape(train_data_gender, (train_data.shape[0], 2, 128, 1))
     if Gen == True:
         eval_gen(x, y, File="eval_gen_test.hdf5")
     else:
-        # eval_gen(train_data_gender, gen_train_labels_gender)
         eval_act(train_data, act_train_labels)
 
 class DataSampler(object):
@@ -336,7 +298,6 @@ class DataSampler(object):
         tmp = self.id_test.copy()
         gen_test = np.array([gen_id_dic[item + 1] for item in tmp])
         self.gen_test_labels = (gen_test).copy()
-
     def next_batch(self, num, data, labels):
         '''
         Return a total of `num` random samples and labels.
@@ -348,46 +309,33 @@ class DataSampler(object):
         labels_shuffle = [labels[i] for i in idx]
         return np.asarray(data_shuffle), np.asarray(labels_shuffle)
         # return np.asarray(data), np.asarray(labels)
-
     def train(self, batch_size, label=False):
         if label:
             return self.next_batch(batch_size, self.train_data, self.train_labels)
         else:
             return self.next_batch(batch_size, self.train_data, self.train_labels)[0]
-
     def w_all_train(self):
         return self.w_train_data
-
     def w_all_train_gender(self):
         return self.w_gen_train_labels
-
     def w_all_test(self):
         return self.w_test_data
-
     def get_act_test(self):
         return self.act_test
-
     def get_act_train(self):
         return self.act_train
-
     def w_all_test_gender(self):
         return self.w_gen_test_labels
-
     def all_train(self):
         return self.train_data
-
     def all_train_labels(self):
         return self.act_train_labels
-
     def all_gender_train_labels(self):
         return self.gen_train_labels
-
     def all_gender_test_labels(self):
         return self.gen_test_labels
-
     def all_test(self):
         return self.test_data
-
     def all_test_labels(self):
         return self.act_test_labels
 
@@ -402,15 +350,12 @@ x = Dense(256, activation='relu')(x)
 x = Dense(128, activation="relu")(x)
 z_mean = Dense(10, name='z_mean')(x)
 z_log_var = Dense(10, name='z_log_var')(x)
-
 # use reparameterization trick to push the sampling out as input
 # note that "output_shape" isn't necessary with the TensorFlow backend
 z = Lambda(sampling, output_shape=(10,), name='z')([z_mean, z_log_var])
-
 # instantiate encoder model
 encoder = Model(inputs, [z_mean, z_log_var, z], name='encoder')
 encoder.summary()
-
 # build decoder model
 latent_inputs = Input(shape=(10,), name='z_sampling')
 x = Dense(128, activation="relu")(latent_inputs)
@@ -424,15 +369,12 @@ outputs = Dense(256, activation='linear')(x)
 # instantiate decoder model
 decoder = Model(latent_inputs, outputs, name='decoder')
 decoder.summary()
-
 # instantiate VAE model
 outputs = decoder(encoder(inputs)[2])
 vae = Model(inputs, outputs, name='vae_mlp')
-
 vae.summary()
 
 DS = DataSampler()
-# x_train = DS.train(1)
 x_train = DS.all_train()
 y_train = DS.all_train_labels()
 act_train_labels = DS.all_train_labels()
@@ -444,59 +386,33 @@ y_test = DS.all_test_labels()
 act_test_labels = DS.all_test_labels()
 gen_test_labels = DS.all_gender_test_labels()
 
-# activity_index = 2
-# x_train = x_train[act_train_labels[:, activity_index]==1]
-
 x_train = x_train[np.logical_or.reduce((act_train == 0., act_train == 1., act_train == 2., act_train == 3.))]
 
-# train_data_added = x_train[act_train_labels[:, 0]==1]
-# x_train = np.concatenate((x_train, train_data_added), axis=0)
-# x_train = np.concatenate((x_train, train_data_added), axis=0)
-# x_train = np.concatenate((x_train, train_data_added), axis=0)
-# x_train = np.concatenate((x_train, train_data_added), axis=0)
-
 reconstruction_loss = mse(inputs, outputs)
-
 kl_loss = 1 + z_log_var - K.square(z_mean) - K.exp(z_log_var)
 kl_loss = K.sum(kl_loss, axis=-1)
 kl_loss *= -0.1
-
 vae_loss = K.mean(reconstruction_loss + kl_loss)
 vae.add_loss(vae_loss)
 vae.compile(optimizer='adam')
 vae.summary()
 
-# # vae.compile(optimizer='adam', loss="mean_squared_error")
-# vae.fit(x_train,
-#                 epochs=3000,
-#                 batch_size=512,
-#                 shuffle=True,
-#                 validation_data=(x_test, None))
-# # vae.save_weights('mlp_vae_'+str(activity_index)+'.h5')
-# # vae.fit(x_train, x_train,
-# #                 epochs=100,
-# #                 batch_size=128,
-# #                 validation_data=(x_test, x_test))
+# Training and fitting the VAE
+# vae.fit(x_train, x_train,
+#                 epochs=100,
+#                 batch_size=128,
+#                 validation_data=(x_test, x_test))
 # vae.save_weights('mlp_vae.h5')
 
+# Training the Inference networks for desired and intrusive inferences
 # train_estimators(1, 2)
-# autoencoder = load_model("auto_mlp.h5")
-# vae.load_weights('mlp_vae_'+str(activity_index)+'.h5')
-vae.load_weights('mlp_vae.h5')
 
-# train_data = DS.all_train()
-# test_data = DS.all_test()
-# act_train_labels = DS.all_train_labels()
-# act_test_labels = DS.all_test_labels()
-# gen_train_labels = DS.all_gender_train_labels()
-# gen_test_labels = DS.all_gender_test_labels()
-# act_train = DS.get_act_train()
-# act_test = DS.get_act_test()
+vae.load_weights('mlp_vae.h5')
 
 Latent_means = np.zeros((5, 2, 10))
 
 for activity_index in range(4):
-    #TESTing
+    #Obtianing the Average values for the latent variables
     train_data = DS.all_train()
     act_train_labels = DS.all_train_labels()
     gen_train_labels = DS.all_gender_train_labels()
@@ -506,11 +422,6 @@ for activity_index in range(4):
     gen_train_labels = gen_train_labels[act_train_labels[:, activity_index]==1]
     act_train_labels = act_train_labels[act_train_labels[:, activity_index]==1]
     act_train = act_train[act_train == activity_index]
-
-    # test_data = test_data[act_test_labels[:, activity_index]==1]
-    # gen_test_labels = gen_test_labels[act_test_labels[:, activity_index]==1]
-    # act_test_labels = act_test_labels[act_test_labels[:, activity_index]==1]
-    # act_test = act_test[act_test == activity_index]
 
     ### Manipulation at the Gender Level
     train_data_0 = train_data[gen_train_labels == 0]
@@ -524,14 +435,8 @@ for activity_index in range(4):
     gender_train_data_0 = np.zeros((train_data_0.shape[0]))
     gender_train_data_1 = np.ones((train_data_1.shape[0]))
 
-    # print(gender_train_data_0.shape)
-    # print(gender_train_data_1.shape)
-
     eval_act_model = load_model("activity_model_mlp.hdf5")
     eval_gen_model = load_model("gender_model_mlp.hdf5")
-
-    # eval_act_model.summary()
-    # eval_gen_model.summary()
 
     Latent_train_0 = encoder.predict(train_data_0)
     Latent_train_1 = encoder.predict(train_data_1)
@@ -542,6 +447,7 @@ for activity_index in range(4):
     Latent_means[activity_index, 0, :] = np.mean(z_train_0, axis=0)
     Latent_means[activity_index, 1, :] = np.mean(z_train_1, axis=0)
 
+#Labels used for F1-score calculation
 ACT_LABELS = ["dws","ups", "wlk", "jog", "std"]
 TRIAL_CODES = {
     ACT_LABELS[0]:[1,2,11],
@@ -609,13 +515,8 @@ train_data = train_data[np.logical_or.reduce((act_train == 0., act_train == 1., 
 gen_train_labels = gen_train_labels[np.logical_or.reduce((act_train == 0., act_train == 1., act_train == 2., act_train == 3.))]
 act_train_labels = act_train_labels[np.logical_or.reduce((act_train == 0., act_train == 1., act_train == 2., act_train == 3.))]
 
-# result1 = eval_act_model.evaluate(X_all, Y_all_act)
-print_act_results_f1_score(eval_act_model, train_data, act_train_labels)
-# result1 = eval_gen_model.evaluate(X_all, Y_all_gen)
-print_gen_results_f1_score(eval_gen_model, train_data, gen_train_labels)
-
+#Testing the General VAE method on test data
 for activity_index in range(4):
-    #TESTing
     train_data = DS.all_test()
     act_train_labels = DS.all_test_labels()
     gen_train_labels = DS.all_gender_test_labels()
@@ -630,37 +531,10 @@ for activity_index in range(4):
     gen_train_labels = gen_train_labels[np.logical_or.reduce((act_train == 0., act_train == 1., act_train == 2., act_train == 3.))]
     act_train_labels = act_train_labels[np.logical_or.reduce((act_train == 0., act_train == 1., act_train == 2., act_train == 3.))]
 
-    # act_train_labels = np.delete(act_train_labels,[4], axis=1)
-
-    # test_data = test_data[act_test_labels[:, activity_index]==1]
-    # gen_test_labels = gen_test_labels[act_test_labels[:, activity_index]==1]
-    # act_test_labels = act_test_labels[act_test_labels[:, activity_index]==1]
-    # act_test = act_test[act_test == activity_index]
-
-    ### Manipulation at the Gender Level
-    # train_data_0 = train_data[gen_train_labels == 0]
-    # act_train_labels_0 = act_train_labels[gen_train_labels == 0]
-    # act_train_0 = act_train[gen_train_labels == 0]
-
-    # train_data_1 = train_data[gen_train_labels == 1]
-    # act_train_labels_1 = act_train_labels[gen_train_labels == 1]
-    # act_train_1 = act_train[gen_train_labels == 1]
-
-    # gender_train_data_0 = np.zeros((train_data_0.shape[0]))
-    # gender_train_data_1 = np.ones((train_data_1.shape[0]))
-
-    # print(gender_train_data_0.shape)
-    # print(gender_train_data_1.shape)
-
-    # eval_act_model.summary()
-    # eval_gen_model.summary()
-
-    # X = np.reshape(train_data, (train_data.shape[0], 2, 128, 1))
     X = train_data
     Y = act_train_labels
     print("Activity Identification for Gender 0")
     print_results(eval_act_model, X, Y)
-    # X = np.reshape(train_data, (train_data.shape[0], 2, 128, 1))
     Y = gen_train_labels
     result1 = eval_gen_model.evaluate(X, Y)
     act_acc = round(result1[1], 4) * 100
@@ -703,31 +577,14 @@ for activity_index in range(4):
         act_label = np.concatenate((act_label, act_train_labels), axis=0)
         gen_label = np.concatenate((gen_label, gen_train_labels), axis=0)
 
-    # X = np.reshape(hat_train_data, (hat_train_data.shape[0], 2, 128, 1))
     X = hat_train_data
     X_all = np.append(X_all, X, axis=0)
 
     Y = act_train_labels
     Y_all_act = np.append(Y_all_act, Y, axis=0)
-    
-    # print("Activity Identification for Gender 0")
-    # print_results(eval_act_model, X, Y)
 
-    # X = np.reshape(hat_train_data, (hat_train_data.shape[0], 2, 128, 1))
     Y = gen_train_labels
     Y_all_gen = np.append(Y_all_gen, Y, axis=0)
-    # result1 = eval_gen_model.evaluate(X, Y)
-    # act_acc = round(result1[1], 4) * 100
-    # print("***[RESULT]***Original: GEN Train Accuracy Gender 0: " + str(act_acc))
 
-# result1 = eval_act_model.evaluate(X_all, Y_all_act)
 print_act_results_f1_score(eval_act_model, X_all, Y_all_act)
-# result1 = eval_gen_model.evaluate(X_all, Y_all_gen)
 print_gen_results_f1_score(eval_gen_model, X_all, Y_all_gen)
-
-# act_gen = round(result1[1], 4) * 100
-
-# print("Activity Identification " + str(act_acc))
-# print("Gender Identification " + str(act_gen))
-
-
