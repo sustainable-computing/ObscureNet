@@ -42,10 +42,8 @@ def to_var(x):
 usecuda = True
 use_gpu = True
 idgpu = 0
-x_dim = 2
-AI = 0 #Activity Index
-zed = [5]
-ma_rate = 0.001
+x_dim = 2 #Dimension of added Condition Variable
+zed = [5] #Latent variable size
 
 for z_dim in zed:
     class Encoder(nn.Module):
@@ -88,7 +86,7 @@ for z_dim in zed:
             h4 = self.relu(self.fc4(h3))
             h5 = self.fc5(h4)
             return h5
-    
+
     data_subjects = pd.read_csv("/home/omid/pycharm/Mobi/data_subjects.csv")
 
     data = np.load("Data/total_data.npy", allow_pickle=True)
@@ -149,12 +147,9 @@ for z_dim in zed:
         x_vae = x_train[activity_train_label[:, activity] == 1]
         act_vae = activity_train_label[activity_train_label[:, activity] == 1]
         gen_vae = gender_train_label[activity_train_label[:, activity] == 1]
-        print(x_vae.shape)
         x_vae_size = x_vae.shape[0]
         x_vae = np.reshape(x_vae, [x_vae_size, 768])
-        print(x_vae.shape)
-        print(act_vae.shape)
-        print(gen_vae.shape)
+
         gen_train = np.zeros((gen_vae.shape[0], 2))
         for i in range(gen_train.shape[0]):
             count = 0
@@ -165,8 +160,6 @@ for z_dim in zed:
                 gen_train[i, 1] = 1
 
         tensor_x = torch.from_numpy(x_vae.astype('float32')) # transform to torch tensor
-        # tensor_y = torch.Tensor(my_y)
-        # tensor_y = torch.from_numpy(gen_vae)
         tensor_y = torch.from_numpy(gen_train.astype('float32'))
 
         vae_dataset = TensorDataset(tensor_x, tensor_y)
@@ -181,6 +174,7 @@ for z_dim in zed:
 
         optimizerencoder = optim.Adam(encodermodel.parameters())
         optimizerdecoder = optim.Adam(decodermodel.parameters())
+        #Uncomment for Training
 '''
         for i in range(40):
             for batch_idx, (train_x, train_y) in enumerate(train_loader):
@@ -215,14 +209,13 @@ for z_dim in zed:
         torch.save(encodermodel.state_dict(), '/home/omid/pycharm/Mobi/models/cae_mobi_g_encoder_'+str(activity)+str(z_dim))
         torch.save(decodermodel.state_dict(), '/home/omid/pycharm/Mobi/models/cae_mobi_g_decoder_'+str(activity)+str(z_dim))
 '''
+
 z_dim = 5
 def print_results(M, X, Y):
     result1 = M.evaluate(X, Y, verbose=2)
     print(result1)
     act_acc = round(result1[1], 4) * 100
     print("***[RESULT]*** ACT Accuracy: " + str(act_acc))
-
-Latent_means = np.zeros((5, 2, z_dim))
 
 act_label = 0
 gen_label = 0
@@ -314,6 +307,7 @@ decodermodel_3.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/cae_mo
 if usecuda:
     decodermodel_3.cuda(idgpu)
 
+#Used for F1-scores
 ACT_LABELS = ["dws","ups", "wlk", "jog", "std"]
 TRIAL_CODES = {
     ACT_LABELS[0]:[1,2,11],
@@ -322,6 +316,7 @@ TRIAL_CODES = {
     ACT_LABELS[3]:[9,16],
     ACT_LABELS[4]:[6,14],
 }
+
 act_labels = ACT_LABELS [0:4]
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, f1_score
 X_all = np.empty([0, x_train.shape[1], x_train.shape[2],x_train.shape[3]])
@@ -375,14 +370,14 @@ def print_gen_results_f1_score(M, X, Y):
     f1act = f1_score(np.argmax(Y_two_d, axis=1), preds_two_d, average=None).mean()
     print("***[RESULT]*** Gender Averaged F-1 Score : "+str(f1act*100))
 
+#Load data and perform Condition Manipulation of the test data
 for activity in range(4):
     print("This is the current activity")
     print(activity)
-    # TESTing
+
     train_data = x_test
     act_train_labels = activity_test_label
     gen_train_labels = gender_test_label
-    # activity_index = 0
     train_data = train_data[act_train_labels[:, activity] == 1]
     gen_train_labels = gen_train_labels[act_train_labels[:, activity] == 1]
     act_train_labels = act_train_labels[act_train_labels[:, activity] == 1]
@@ -425,7 +420,6 @@ for activity in range(4):
         X_inside = train_data[pred_act[:, act_inside] == 1]
         Y_gen_inside = pred_gen[pred_act[:, act_inside] == 1]
         Y_test_gen = gen_train_labels[pred_act[:, act_inside] == 1]
-        print(Y_act_inside.shape)
         
         if Y_act_inside != []:
             if act_inside == 0:
@@ -452,7 +446,7 @@ for activity in range(4):
                     count = count + 1
                 else:
                     pass
-            print(count)
+
             count = 0
             for i in range(Y_gen_inside.shape[0]):
                 if Y_gen_inside[i, 0] == 1:
@@ -460,7 +454,7 @@ for activity in range(4):
                     y_dataset[i, 0] = 1
                 else:
                     y_dataset[i, 1] = 1
-            print(count)
+
             tensor_Y = torch.from_numpy(y_dataset)
             data_dataset = TensorDataset(tensor_X, tensor_Y)
             train_loader = torch.utils.data.DataLoader(data_dataset, batch_size=256, shuffle=False)
@@ -506,14 +500,11 @@ for activity in range(4):
     X_all = np.append(X_all, X, axis=0)
     Y_all_act = np.append(Y_all_act, Y, axis=0)
 
-    # X = np.reshape(hat_train_data, (hat_train_data.shape[0], 2, 128, 1))
     Y = hat_gen_data
     result1 = eval_gen_model.evaluate(X, Y)
     act_acc = round(result1[1], 4) * 100
     print("Gender Identification: " + str(act_acc))
     Y_all_gen = np.append(Y_all_gen, Y, axis=0)
 
-# result1 = eval_act_model.evaluate(X_all, Y_all_act)
 print_act_results_f1_score(eval_act_model, X_all, Y_all_act)
-# result1 = eval_gen_model.evaluate(X_all, Y_all_gen)
 print_gen_results_f1_score(eval_gen_model, X_all, Y_all_gen)
