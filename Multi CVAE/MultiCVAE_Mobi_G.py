@@ -1,7 +1,7 @@
 import numpy as np
 import os
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID";
-os.environ["CUDA_VISIBLE_DEVICES"] = "0";
+os.environ["CUDA_VISIBLE_DEVICES"] = "2";
 from keras.layers import Reshape, Lambda
 import numpy as np
 import pandas as pd
@@ -51,7 +51,7 @@ for z_dim in zed:
     class Encoder(nn.Module):
         def __init__(self):
             super(Encoder, self).__init__()
-            self.fc1 = nn.Linear(768+x_dim, 512)
+            self.fc1 = nn.Linear(768, 512)
             self.fc2 = nn.Linear(512,512)
             self.fc3 = nn.Linear(512,256)
             self.fc4 = nn.Linear(256,128)
@@ -145,7 +145,7 @@ for z_dim in zed:
     gender_test_label = gender_test
     x_train = data_train.reshape((data_train.shape[0], data_train.shape[1], data_train.shape[2], 1))
     x_test = data_test.reshape((data_test.shape[0], data_test.shape[1], data_test.shape[2], 1))
-    for activity in [AI]:
+    for activity in range(4):
         print("########################################################")
         print(activity)
         x_vae = x_train[activity_train_label[:, activity] == 1]
@@ -200,8 +200,7 @@ for z_dim in zed:
                 optimizerencoder.zero_grad()
                 optimizerdecoder.zero_grad()
 
-                cat_x = torch.cat((train_x, train_y), dim = 1)
-                train_z, mu, log_var = encodermodel(cat_x)
+                train_z, mu, log_var = encodermodel(train_x)
                 cat_z = torch.cat((train_z, train_y), dim = 1)
                 train_xr = decodermodel(cat_z)
 
@@ -216,8 +215,8 @@ for z_dim in zed:
 
                 if(batch_idx%100 == 0):
                     print("Epoch %d : MSE is %f, KLD loss is %f" % (i,recons_loss.data, kld_loss.data))
-        torch.save(encodermodel.state_dict(), '/home/omid/pycharm/Mobi/models/4vae_encoder_'+str(activity)+str(z_dim))
-        torch.save(decodermodel.state_dict(), '/home/omid/pycharm/Mobi/models/4vae_decoder_'+str(activity)+str(z_dim))
+        torch.save(encodermodel.state_dict(), '/home/omid/pycharm/Mobi/models/multi_cvae_mobi_g_encoder_'+str(activity)+str(z_dim))
+        torch.save(decodermodel.state_dict(), '/home/omid/pycharm/Mobi/models/multi_cvae_mobi_g_decoder_'+str(activity)+str(z_dim))
 '''
 z_dim = 5
 def print_results(M, X, Y):
@@ -283,42 +282,103 @@ x_train = data_train.reshape((data_train.shape[0], data_train.shape[1], data_tra
 x_test = data_test.reshape((data_test.shape[0], data_test.shape[1], data_test.shape[2], 1))
 
 encodermodel_0 = Encoder().double()
-encodermodel_0.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/4vae_encoder_0'+str(z_dim)))
+encodermodel_0.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/multi_cvae_mobi_g_encoder_0'+str(z_dim)))
 if usecuda:
     encodermodel_0.cuda(idgpu)
 decodermodel_0 = Decoder().double()
-decodermodel_0.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/4vae_decoder_0'+str(z_dim)))
+decodermodel_0.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/multi_cvae_mobi_g_decoder_0'+str(z_dim)))
 if usecuda:
     decodermodel_0.cuda(idgpu)
 
 encodermodel_1 = Encoder().double()
-encodermodel_1.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/4vae_encoder_1'+str(z_dim)))
+encodermodel_1.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/multi_cvae_mobi_g_encoder_1'+str(z_dim)))
 if usecuda:
     encodermodel_1.cuda(idgpu)
 decodermodel_1 = Decoder().double()
-decodermodel_1.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/4vae_decoder_1'+str(z_dim)))
+decodermodel_1.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/multi_cvae_mobi_g_decoder_1'+str(z_dim)))
 if usecuda:
     decodermodel_1.cuda(idgpu)
 
 encodermodel_2 = Encoder().double()
-encodermodel_2.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/4vae_encoder_2'+str(z_dim)))
+encodermodel_2.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/multi_cvae_mobi_g_encoder_2'+str(z_dim)))
 if usecuda:
     encodermodel_2.cuda(idgpu)
 decodermodel_2 = Decoder().double()
-decodermodel_2.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/4vae_decoder_2'+str(z_dim)))
+decodermodel_2.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/multi_cvae_mobi_g_decoder_2'+str(z_dim)))
 if usecuda:
     decodermodel_2.cuda(idgpu)
 
 encodermodel_3 = Encoder().double()
-encodermodel_3.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/4vae_encoder_3'+str(z_dim)))
+encodermodel_3.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/multi_cvae_mobi_g_encoder_3'+str(z_dim)))
 if usecuda:
     encodermodel_3.cuda(idgpu)
 decodermodel_3 = Decoder().double()
-decodermodel_3.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/4vae_decoder_3'+str(z_dim)))
+decodermodel_3.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/multi_cvae_mobi_g_decoder_3'+str(z_dim)))
 if usecuda:
     decodermodel_3.cuda(idgpu)
+
+ACT_LABELS = ["dws","ups", "wlk", "jog", "std"]
+TRIAL_CODES = {
+    ACT_LABELS[0]:[1,2,11],
+    ACT_LABELS[1]:[3,4,12],
+    ACT_LABELS[2]:[7,8,15],
+    ACT_LABELS[3]:[9,16],
+    ACT_LABELS[4]:[6,14],
+}
+act_labels = ACT_LABELS [0:4]
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, f1_score
+X_all = np.empty([0, x_train.shape[1], x_train.shape[2],x_train.shape[3]])
+Y_all_act = np.empty([0, 4])
+Y_all_gen = np.empty([0])
+X_original = np.empty([0, x_test.shape[1]])
+
+def print_act_results_f1_score(M, X, Y):
+    result1 = M.evaluate(X, Y, verbose = 2)
+    act_acc = round(result1[1], 4)*100
+    print("***[RESULT]*** ACT Accuracy: "+str(act_acc))
+
+    preds = M.predict(X)
+    preds = np.argmax(preds, axis=1)
+    conf_mat = confusion_matrix(np.argmax(Y, axis=1), preds)
+    conf_mat = conf_mat.astype('float') / conf_mat.sum(axis=1)[:, np.newaxis]
+    print("***[RESULT]*** ACT  Confusion Matrix")
+    print(" | ".join(act_labels))
+    print(np.array(conf_mat).round(3)*100)  
+
+    f1act = f1_score(np.argmax(Y, axis=1), preds, average=None).mean()
+    print("***[RESULT]*** ACT Averaged F-1 Score : "+str(f1act*100))
+
+def print_gen_results_f1_score(M, X, Y):
+    result1 = M.evaluate(X, Y, verbose = 2)
+    act_acc = round(result1[1], 4)*100
+    print("***[RESULT]*** Gender Accuracy: "+str(act_acc))
+
+    preds = M.predict(X)
+    preds_two_d = np.zeros((preds.shape[0], 2))
+    for lop in range(preds.shape[0]):
+        if preds[lop] < 0.5:
+            preds_two_d[lop, 0] = 1
+        else:
+            preds_two_d[lop, 1] = 1
     
-for activity in [1]:
+    Y_two_d = np.zeros((Y.shape[0], 2))
+    for lop in range(Y.shape[0]):
+        if Y[lop] == 0:
+            Y_two_d[lop, 0] = 1
+        else:
+            Y_two_d[lop, 1] = 1
+    
+    preds_two_d = np.argmax(preds_two_d, axis=1)
+    conf_mat = confusion_matrix(np.argmax(Y_two_d, axis=1), preds_two_d)
+    conf_mat = conf_mat.astype('float') / conf_mat.sum(axis=1)[:, np.newaxis]
+    print("***[RESULT]*** Gender  Confusion Matrix")
+    print(" | ".join(act_labels))
+    print(np.array(conf_mat).round(3)*100)  
+
+    f1act = f1_score(np.argmax(Y_two_d, axis=1), preds_two_d, average=None).mean()
+    print("***[RESULT]*** Gender Averaged F-1 Score : "+str(f1act*100))
+
+for activity in range(4):
     print("This is the current activity")
     print(activity)
     # TESTing
@@ -360,7 +420,8 @@ for activity in [1]:
             pred_gen[index, 0] = 1
     
     hat_train_data = np.empty((0,768), float)
-    
+    hat_gen_data = np.empty((0), float)
+
     for act_inside in range(4):
         print(act_inside)
         Y_act_inside = pred_act[pred_act[:, act_inside] == 1]
@@ -414,8 +475,7 @@ for activity in [1]:
                 if(usecuda):
                     train_x = train_x.cuda(idgpu)
                     train_y = train_y.cuda(idgpu)
-                x_cat = torch.cat((train_x, train_y), dim=1)
-                z_batch = encodermodel(x_cat)[0]
+                z_batch = encodermodel(train_x)[0]
                 z = np.append(z, z_batch.data.cpu(), axis=0)
 
             z_train = z.copy()
@@ -441,14 +501,22 @@ for activity in [1]:
                 z_cat = torch.cat((z, y), dim=1)
                 x_hat = decodermodel(z_cat)
                 hat_train_data = np.append(hat_train_data, x_hat.data.cpu(), axis=0)
-
+            hat_gen_data = np.append(hat_gen_data, Y_test_gen, axis=0)
     X = np.reshape(hat_train_data, [train_data.shape[0], train_data.shape[1], train_data.shape[2],train_data.shape[3]])
     Y = act_train_labels
     print("Activity Identification:")
     print_results(eval_act_model, X, Y)
+    X_all = np.append(X_all, X, axis=0)
+    Y_all_act = np.append(Y_all_act, Y, axis=0)
 
     # X = np.reshape(hat_train_data, (hat_train_data.shape[0], 2, 128, 1))
-    Y = gen_train_labels
+    Y = hat_gen_data
     result1 = eval_gen_model.evaluate(X, Y)
     act_acc = round(result1[1], 4) * 100
     print("Gender Identification: " + str(act_acc))
+    Y_all_gen = np.append(Y_all_gen, Y, axis=0)
+
+# result1 = eval_act_model.evaluate(X_all, Y_all_act)
+print_act_results_f1_score(eval_act_model, X_all, Y_all_act)
+# result1 = eval_gen_model.evaluate(X_all, Y_all_gen)
+print_gen_results_f1_score(eval_gen_model, X_all, Y_all_gen)

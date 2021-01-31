@@ -1,7 +1,7 @@
 import numpy as np
 import os
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID";
-os.environ["CUDA_VISIBLE_DEVICES"] = "0";
+os.environ["CUDA_VISIBLE_DEVICES"] = "1";
 from keras.layers import Reshape, Lambda
 import numpy as np
 import pandas as pd
@@ -657,6 +657,63 @@ if usecuda:
 print(encodermodel_0)
 print(decodermodel_0)
 
+ACT_LABELS = ["dws","ups", "wlk", "jog", "std"]
+TRIAL_CODES = {
+    ACT_LABELS[0]:[1,2,11],
+    ACT_LABELS[1]:[3,4,12],
+    ACT_LABELS[2]:[7,8,15],
+    ACT_LABELS[3]:[9,16],
+    ACT_LABELS[4]:[6,14],
+}
+act_labels = ACT_LABELS [0:4]
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, f1_score
+X_all = np.empty([0, x_train.shape[1], x_train.shape[2],x_train.shape[3]])
+Y_all_act = np.empty([0, 4])
+Y_all_weight = np.empty([0, 3])
+X_original = np.empty([0, x_test.shape[1]])
+
+def print_act_results_f1_score(M, X, Y):
+    result1 = M.evaluate(X, Y, verbose = 2)
+    act_acc = round(result1[1], 4)*100
+    print("***[RESULT]*** ACT Accuracy: "+str(act_acc))
+
+    preds = M.predict(X)
+    preds = np.argmax(preds, axis=1)
+    conf_mat = confusion_matrix(np.argmax(Y, axis=1), preds)
+    conf_mat = conf_mat.astype('float') / conf_mat.sum(axis=1)[:, np.newaxis]
+    print("***[RESULT]*** ACT  Confusion Matrix")
+    print(" | ".join(act_labels))
+    print(np.array(conf_mat).round(3)*100)  
+
+    f1act = f1_score(np.argmax(Y, axis=1), preds, average=None).mean()
+    print("***[RESULT]*** ACT Averaged F-1 Score : "+str(f1act*100))
+
+def print_weight_results_f1_score(M, X, Y):
+    result1 = M.evaluate(X, Y, verbose = 2)
+    act_acc = round(result1[1], 4)*100
+    print("***[RESULT]*** Weight Accuracy: "+str(act_acc))
+
+    preds = M.predict(X)
+    preds = np.argmax(preds, axis=1)
+    conf_mat = confusion_matrix(np.argmax(Y, axis=1), preds)
+    conf_mat = conf_mat.astype('float') / conf_mat.sum(axis=1)[:, np.newaxis]
+    print("***[RESULT]*** Weight Confusion Matrix")
+    print(" | ".join(act_labels))
+    print(np.array(conf_mat).round(3)*100)
+
+    f1act = f1_score(np.argmax(Y, axis=1), preds, average=None).mean()
+    print("***[RESULT]*** Weight Averaged F-1 Score : "+str(f1act*100))
+
+train_data = x_test
+act_train_labels = activity_test_label
+gen_train_labels = gender_test_label
+age_train_labels = age_test_label
+weight_train_labels = weight_test_label
+X = np.reshape(train_data, (train_data.shape[0], train_data.shape[1], train_data.shape[2],train_data.shape[3]))
+
+print_act_results_f1_score(eval_act_model, X, act_train_labels)
+print_weight_results_f1_score(eval_weight_model, X, weight_train_labels)
+
 for activity in range(4):
     print("This is the current activity")
     print(activity)
@@ -707,13 +764,15 @@ for activity in range(4):
             pred_weight[index, 2] = 1
     
     hat_train_data = np.empty((0,768), float)
-    
+    hat_wght_data = np.empty((0,3), float)
+
     for act_inside in range(4):
         print(act_inside)
         Y_act_inside = pred_act[pred_act[:, act_inside] == 1]
         X_inside = train_data[pred_act[:, act_inside] == 1]
         Y_weight_inside = pred_weight[pred_act[:, act_inside] == 1]
-        
+        Y_test_wght = weight_train_labels[pred_act[:, act_inside] == 1]
+
         if Y_act_inside != []:
             encodermodel = encodermodel_0
             decodermodel = decodermodel_0
@@ -749,7 +808,7 @@ for activity in range(4):
             for l in range(z_train.shape[0]):
                 if Y_weight_inside[l, 0] == 1:
                     z_train[l] = z_train[l] - latent_means[activity, 0, :] + latent_means[activity, 2, :]
-                elif Y_weight_inside[1, 1] == 1:
+                elif Y_weight_inside[l, 1] == 1:
                     z_train[l] = z_train[l] - latent_means[activity, 1, :] + latent_means[activity, 0, :]
                 else:
                     z_train[l] = z_train[l] - latent_means[activity, 2, :] + latent_means[activity, 1, :]
@@ -776,14 +835,20 @@ for activity in range(4):
                     y = y.cuda(idgpu)
                 x_hat = decodermodel(z)
                 hat_train_data = np.append(hat_train_data, x_hat.data.cpu(), axis=0)
-    
+            hat_wght_data = np.append(hat_wght_data, Y_test_wght, axis=0)
     X = np.reshape(hat_train_data, [train_data.shape[0], train_data.shape[1], train_data.shape[2],train_data.shape[3]])
     Y = act_train_labels
     print("Activity Identification:")
     print_results(eval_act_model, X, Y)
+    X_all = np.append(X_all, X, axis=0)
+    Y_all_act = np.append(Y_all_act, Y, axis=0)
 
     # X = np.reshape(hat_train_data, (hat_train_data.shape[0], 2, 128, 1))
-    Y = weight_train_labels
+    Y = hat_wght_data
     result1 = eval_weight_model.evaluate(X, Y)
     act_acc = round(result1[1], 4) * 100
     print("Weight Identification: " + str(act_acc))
+    Y_all_weight = np.append(Y_all_weight, Y, axis=0)
+
+print_act_results_f1_score(eval_act_model, X_all, Y_all_act)
+print_weight_results_f1_score(eval_weight_model, X_all, Y_all_weight)

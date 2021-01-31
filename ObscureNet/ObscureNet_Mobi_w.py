@@ -248,7 +248,7 @@ for z_dim in zed:
     x_train = data_train.reshape((data_train.shape[0], data_train.shape[1], data_train.shape[2], 1))
     x_test = data_test.reshape((data_test.shape[0], data_test.shape[1], data_test.shape[2], 1))
 
-    for activity in [1]:
+    for activity in [0, 2, 3]:
 
         x_vae = x_train[activity_train_label[:, activity] == 1]
         act_vae = activity_train_label[activity_train_label[:, activity] == 1]
@@ -277,7 +277,7 @@ for z_dim in zed:
         optimizerencoder = optim.Adam(encodermodel.parameters())
         optimizerdecoder = optim.Adam(decodermodel.parameters())
         optimizer_aux = optim.Adam(aux.parameters())
-
+'''
         for i in range(200):
             for batch_idx, (train_x, train_y) in enumerate(train_loader):
                 train_x= Variable(train_x)
@@ -311,9 +311,9 @@ for z_dim in zed:
                 vaeLoss = -auxEncLoss
 
                 recons_loss = F.mse_loss(train_xr, train_x)*512
-                kld_loss = torch.mean(-0.5 * torch.sum(1 + log_var - mu ** 2 - log_var.exp(), dim = 1), dim = 0)
+                kld_loss = torch.mean(-2 * torch.sum(1 + log_var - mu ** 2 - log_var.exp(), dim = 1), dim = 0)
 
-                loss = torch.mean((recons_loss + kld_loss)/150) + 2*vaeLoss
+                loss = torch.mean((recons_loss + kld_loss)/150) + 0.2*vaeLoss
                 loss.backward()
 
                 optimizerencoder.step()
@@ -327,9 +327,9 @@ for z_dim in zed:
                     # print("***[RESULT]*** Aux results" + str(accuracy.data))
                     print("Epoch %d : MSE is %f, KLD loss is %f, AUX loss is %f" % (i,recons_loss.data, kld_loss.data, auxLoss.data))
         
-        torch.save(encodermodel.state_dict(), '/home/omid/pycharm/Mobi/models/obs_mobi_w_encoder_'+str(activity)+str(z_dim))
-        torch.save(decodermodel.state_dict(), '/home/omid/pycharm/Mobi/models/obs_mobi_w_decoder_'+str(activity)+str(z_dim))
-
+        torch.save(encodermodel.state_dict(), '/home/omid/pycharm/Mobi/models/obs_mobi_w_encoder_alpha_02_beta_2_'+str(activity)+str(z_dim))
+        torch.save(decodermodel.state_dict(), '/home/omid/pycharm/Mobi/models/obs_mobi_w_decoder_alpha_02_beta_2_'+str(activity)+str(z_dim))
+'''
 def print_results(M, X, Y):
     result1 = M.evaluate(X, Y, verbose=2)
     print(result1)
@@ -391,40 +391,87 @@ x_train = data_train.reshape((data_train.shape[0], data_train.shape[1], data_tra
 x_test = data_test.reshape((data_test.shape[0], data_test.shape[1], data_test.shape[2], 1))
 
 encodermodel_0 = Encoder().double()
-encodermodel_0.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/obs_mobi_w_encoder_0'+str(z_dim)))
+encodermodel_0.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/obs_mobi_w_encoder_alpha_02_beta_2_0'+str(z_dim)))
 if usecuda:
     encodermodel_0.cuda(idgpu)
 decodermodel_0 = Decoder().double()
-decodermodel_0.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/obs_mobi_w_decoder_0'+str(z_dim)))
+decodermodel_0.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/obs_mobi_w_decoder_alpha_02_beta_2_0'+str(z_dim)))
 if usecuda:
     decodermodel_0.cuda(idgpu)
 
 encodermodel_1 = Encoder().double()
-encodermodel_1.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/obs_mobi_w_encoder_1'+str(z_dim)))
+encodermodel_1.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/obs_mobi_w_encoder_alpha_02_beta_2_1'+str(z_dim)))
 if usecuda:
     encodermodel_1.cuda(idgpu)
 decodermodel_1 = Decoder().double()
-decodermodel_1.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/obs_mobi_w_decoder_1'+str(z_dim)))
+decodermodel_1.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/obs_mobi_w_decoder_alpha_02_beta_2_1'+str(z_dim)))
 if usecuda:
     decodermodel_1.cuda(idgpu)
 
 encodermodel_2 = Encoder().double()
-encodermodel_2.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/obs_mobi_w_encoder_2'+str(z_dim)))
+encodermodel_2.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/obs_mobi_w_encoder_alpha_02_beta_2_2'+str(z_dim)))
 if usecuda:
     encodermodel_2.cuda(idgpu)
 decodermodel_2 = Decoder().double()
-decodermodel_2.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/obs_mobi_w_decoder_2'+str(z_dim)))
+decodermodel_2.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/obs_mobi_w_decoder_alpha_02_beta_2_2'+str(z_dim)))
 if usecuda:
     decodermodel_2.cuda(idgpu)
 
 encodermodel_3 = Encoder().double()
-encodermodel_3.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/obs_mobi_w_encoder_3'+str(z_dim)))
+encodermodel_3.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/obs_mobi_w_encoder_alpha_02_beta_2_3'+str(z_dim)))
 if usecuda:
     encodermodel_3.cuda(idgpu)
 decodermodel_3 = Decoder().double()
-decodermodel_3.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/obs_mobi_w_decoder_3'+str(z_dim)))
+decodermodel_3.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/obs_mobi_w_decoder_alpha_02_beta_2_3'+str(z_dim)))
 if usecuda:
     decodermodel_3.cuda(idgpu)
+
+ACT_LABELS = ["dws","ups", "wlk", "jog", "std"]
+TRIAL_CODES = {
+    ACT_LABELS[0]:[1,2,11],
+    ACT_LABELS[1]:[3,4,12],
+    ACT_LABELS[2]:[7,8,15],
+    ACT_LABELS[3]:[9,16],
+    ACT_LABELS[4]:[6,14],
+}
+act_labels = ACT_LABELS [0:4]
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, f1_score
+X_all = np.empty([0, x_train.shape[1], x_train.shape[2],x_train.shape[3]])
+Y_all_act = np.empty([0, 4])
+Y_all_weight = np.empty([0, 3])
+X_original = np.empty([0, x_test.shape[1]])
+
+def print_act_results_f1_score(M, X, Y):
+    result1 = M.evaluate(X, Y, verbose = 2)
+    act_acc = round(result1[1], 4)*100
+    print("***[RESULT]*** ACT Accuracy: "+str(act_acc))
+
+    preds = M.predict(X)
+    preds = np.argmax(preds, axis=1)
+    conf_mat = confusion_matrix(np.argmax(Y, axis=1), preds)
+    conf_mat = conf_mat.astype('float') / conf_mat.sum(axis=1)[:, np.newaxis]
+    print("***[RESULT]*** ACT  Confusion Matrix")
+    print(" | ".join(act_labels))
+    print(np.array(conf_mat).round(3)*100)  
+
+    f1act = f1_score(np.argmax(Y, axis=1), preds, average=None).mean()
+    print("***[RESULT]*** ACT Averaged F-1 Score : "+str(f1act*100))
+
+def print_weight_results_f1_score(M, X, Y):
+    result1 = M.evaluate(X, Y, verbose = 2)
+    act_acc = round(result1[1], 4)*100
+    print("***[RESULT]*** Weight Accuracy: "+str(act_acc))
+
+    preds = M.predict(X)
+    preds = np.argmax(preds, axis=1)
+    conf_mat = confusion_matrix(np.argmax(Y, axis=1), preds)
+    conf_mat = conf_mat.astype('float') / conf_mat.sum(axis=1)[:, np.newaxis]
+    print("***[RESULT]*** Weight Confusion Matrix")
+    print(" | ".join(act_labels))
+    print(np.array(conf_mat).round(3)*100)
+
+    f1act = f1_score(np.argmax(Y, axis=1), preds, average=None).mean()
+    print("***[RESULT]*** Weight Averaged F-1 Score : "+str(f1act*100))
 
 for activity in range(4):
     print("This is the current activity")
@@ -481,12 +528,15 @@ for activity in range(4):
             pred_weight[index, 2] = 1
     
     hat_train_data = np.empty((0,768), float)
+    hat_wght_data = np.empty((0,3), float)
+
     
     for act_inside in range(4):
         print(act_inside)
         Y_act_inside = pred_act[pred_act[:, act_inside] == 1]
         X_inside = train_data[pred_act[:, act_inside] == 1]
         Y_weight_inside = pred_weight[pred_act[:, act_inside] == 1]
+        Y_test_wght = weight_train_labels[pred_act[:, act_inside] == 1]
         
         if Y_act_inside != []:
             if act_inside == 0:
@@ -553,14 +603,22 @@ for activity in range(4):
                 z_cat = torch.cat((z, y), dim=1)
                 x_hat = decodermodel(z_cat)
                 hat_train_data = np.append(hat_train_data, x_hat.data.cpu(), axis=0)
+            
+            hat_wght_data = np.append(hat_wght_data, Y_test_wght, axis=0)
     
     X = np.reshape(hat_train_data, [train_data.shape[0], train_data.shape[1], train_data.shape[2],train_data.shape[3]])
     Y = act_train_labels
     print("Activity Identification:")
     print_results(eval_act_model, X, Y)
+    X_all = np.append(X_all, X, axis=0)
+    Y_all_act = np.append(Y_all_act, Y, axis=0)
 
     # X = np.reshape(hat_train_data, (hat_train_data.shape[0], 2, 128, 1))
-    Y = weight_train_labels
+    Y = hat_wght_data
     result1 = eval_weight_model.evaluate(X, Y)
     act_acc = round(result1[1], 4) * 100
     print("Weight Identification: " + str(act_acc))
+    Y_all_weight = np.append(Y_all_weight, Y, axis=0)
+
+print_act_results_f1_score(eval_act_model, X_all, Y_all_act)
+print_weight_results_f1_score(eval_weight_model, X_all, Y_all_weight)

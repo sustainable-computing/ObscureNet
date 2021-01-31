@@ -1,7 +1,7 @@
 import numpy as np
 import os
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID";
-os.environ["CUDA_VISIBLE_DEVICES"] = "0";
+os.environ["CUDA_VISIBLE_DEVICES"] = "1";
 from keras.layers import Reshape, Lambda
 import numpy as np
 import pandas as pd
@@ -89,6 +89,27 @@ for z_dim in zed:
             h5 = self.fc5(h4)
             return h5
     
+    class AUX(nn.Module):
+        def __init__(self, nz, numLabels=1):
+            super(AUX, self).__init__()
+            self.nz = nz
+            self.numLabels = numLabels
+            self.aux1 = nn.Linear(nz, 128)
+            # self.aux2 = nn.Linear(128, 64)
+            self.aux3 = nn.Linear(128, numLabels)
+        def infer_y_from_z(self, z):
+            z = F.relu(self.aux1(z))
+            # z = F.relu(self.aux2(z))
+            if self.numLabels==1:
+                z = F.sigmoid(self.aux3(z))
+            else:
+                z = F.softmax(self.aux3(z))
+            return z
+        def forward(self, z):
+            return self.infer_y_from_z(z)
+        def loss(self, pred, target):
+            return F.nll_loss(pred, target)
+    
     data_subjects = pd.read_csv("/home/omid/pycharm/Mobi/data_subjects.csv")
 
     data = np.load("Data/total_data.npy", allow_pickle=True)
@@ -143,6 +164,15 @@ for z_dim in zed:
     x_train = data_train.reshape((data_train.shape[0], data_train.shape[1], data_train.shape[2], 1))
     x_test = data_test.reshape((data_test.shape[0], data_test.shape[1], data_test.shape[2], 1))
 
+    def get_class_weights(y):
+        counter = Counter(y)
+        majority = max(counter.values())
+        return {cls: float(majority / count) for cls, count in counter.items()}
+    
+    class_weight = get_class_weights(gender_train)
+
+    print(class_weight)
+
     for activity in range(4):
         print("########################################################")
         print(activity)
@@ -163,15 +193,26 @@ for z_dim in zed:
                 gen_train[i, 0] = 1
             else:
                 gen_train[i, 1] = 1
+        y = np.zeros((gen_vae.shape[0], 1))
+        for i in range(gen_train.shape[0]):
+            count = 0
+            gen = gen_vae[i]
+            y[i, 0] = gen
 
         tensor_x = torch.from_numpy(x_vae.astype('float32')) # transform to torch tensor
         # tensor_y = torch.Tensor(my_y)
         # tensor_y = torch.from_numpy(gen_vae)
         tensor_y = torch.from_numpy(gen_train.astype('float32'))
+        y = torch.from_numpy(y.astype('float32'))
 
-        vae_dataset = TensorDataset(tensor_x, tensor_y)
+        class_weight = [1.0, 1.2497245187542707]
+        class_weight_tensor = torch.FloatTensor(class_weight).cuda()
+
+        vae_dataset = TensorDataset(tensor_x, tensor_y, y)
         train_loader = torch.utils.data.DataLoader(vae_dataset, batch_size=128, shuffle=True)
-
+        aux = AUX(z_dim, numLabels=2)
+        if use_gpu:
+            aux.cuda(idgpu)
         encodermodel = Encoder()
         if usecuda:
             encodermodel.cuda(idgpu)
@@ -181,11 +222,12 @@ for z_dim in zed:
 
         optimizerencoder = optim.Adam(encodermodel.parameters())
         optimizerdecoder = optim.Adam(decodermodel.parameters())
-'''
+        optimizer_aux = optim.Adam(aux.parameters())
         for i in range(40):
-            for batch_idx, (train_x, train_y) in enumerate(train_loader):
+            for batch_idx, (train_x, train_y, y) in enumerate(train_loader):
                 train_x= Variable(train_x)
                 train_y= Variable(train_y)
+                y = Variable(y)
 
                 true_samples = torch.randn((len(train_x),z_dim))
                 true_samples = Variable(true_samples)
@@ -194,6 +236,8 @@ for z_dim in zed:
                     train_x = train_x.cuda(idgpu)
                     true_samples = true_samples.cuda(idgpu)
                     train_y = train_y.cuda(idgpu)
+                    y = y.cuda(idgpu)
+
 
                 optimizerencoder.zero_grad()
                 optimizerdecoder.zero_grad()
@@ -202,9 +246,21 @@ for z_dim in zed:
                 cat_z = torch.cat((train_z, train_y), dim = 1)
                 train_xr = decodermodel(cat_z)
 
+                for k in range(20):
+                    #Train the aux net to predict y from z
+                    auxY = aux(train_z.detach()) #detach: to ONLY update the AUX net #the prediction here for GT being predY
+                    auxLoss = F.binary_cross_entropy(auxY.type_as(train_y), train_y, weight= class_weight_tensor) #correct order  #predY is a Nx2 use 2nd col.
+                    auxLoss.backward()
+                    optimizer_aux.step()
+
+                #Train the encoder to NOT predict y from z
+                auxK = aux(train_z) #not detached update the encoder!
+                auxEncLoss = F.binary_cross_entropy(auxK.type_as(train_y), train_y, weight= class_weight_tensor)
+                vaeLoss = -auxEncLoss
+
                 recons_loss = F.mse_loss(train_xr, train_x)*512
 
-                loss = (recons_loss)/150
+                loss = (recons_loss)/150+2*vaeLoss
                 loss.backward()
 
                 optimizerencoder.step()
@@ -212,9 +268,9 @@ for z_dim in zed:
 
                 if(batch_idx%100 == 0):
                     print("Epoch %d : MSE is %f" % (i,recons_loss.data))
-        torch.save(encodermodel.state_dict(), '/home/omid/pycharm/Mobi/models/cae_mobi_g_encoder_'+str(activity)+str(z_dim))
-        torch.save(decodermodel.state_dict(), '/home/omid/pycharm/Mobi/models/cae_mobi_g_decoder_'+str(activity)+str(z_dim))
-'''
+        torch.save(encodermodel.state_dict(), '/home/omid/pycharm/Mobi/models/cae_if_mobi_g_encoder_'+str(activity)+str(z_dim))
+        torch.save(decodermodel.state_dict(), '/home/omid/pycharm/Mobi/models/cae_if_mobi_g_decoder_'+str(activity)+str(z_dim))
+
 z_dim = 5
 def print_results(M, X, Y):
     result1 = M.evaluate(X, Y, verbose=2)
@@ -279,102 +335,41 @@ x_train = data_train.reshape((data_train.shape[0], data_train.shape[1], data_tra
 x_test = data_test.reshape((data_test.shape[0], data_test.shape[1], data_test.shape[2], 1))
 
 encodermodel_0 = Encoder().double()
-encodermodel_0.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/cae_mobi_g_encoder_0'+str(z_dim)))
+encodermodel_0.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/cae_if_mobi_g_encoder_0'+str(z_dim)))
 if usecuda:
     encodermodel_0.cuda(idgpu)
 decodermodel_0 = Decoder().double()
-decodermodel_0.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/cae_mobi_g_decoder_0'+str(z_dim)))
+decodermodel_0.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/cae_if_mobi_g_decoder_0'+str(z_dim)))
 if usecuda:
     decodermodel_0.cuda(idgpu)
 
 encodermodel_1 = Encoder().double()
-encodermodel_1.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/cae_mobi_g_encoder_1'+str(z_dim)))
+encodermodel_1.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/cae_if_mobi_g_encoder_1'+str(z_dim)))
 if usecuda:
     encodermodel_1.cuda(idgpu)
 decodermodel_1 = Decoder().double()
-decodermodel_1.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/cae_mobi_g_decoder_1'+str(z_dim)))
+decodermodel_1.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/cae_if_mobi_g_decoder_1'+str(z_dim)))
 if usecuda:
     decodermodel_1.cuda(idgpu)
 
 encodermodel_2 = Encoder().double()
-encodermodel_2.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/cae_mobi_g_encoder_2'+str(z_dim)))
+encodermodel_2.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/cae_if_mobi_g_encoder_2'+str(z_dim)))
 if usecuda:
     encodermodel_2.cuda(idgpu)
 decodermodel_2 = Decoder().double()
-decodermodel_2.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/cae_mobi_g_decoder_2'+str(z_dim)))
+decodermodel_2.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/cae_if_mobi_g_decoder_2'+str(z_dim)))
 if usecuda:
     decodermodel_2.cuda(idgpu)
 
 encodermodel_3 = Encoder().double()
-encodermodel_3.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/cae_mobi_g_encoder_3'+str(z_dim)))
+encodermodel_3.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/cae_if_mobi_g_encoder_3'+str(z_dim)))
 if usecuda:
     encodermodel_3.cuda(idgpu)
 decodermodel_3 = Decoder().double()
-decodermodel_3.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/cae_mobi_g_decoder_3'+str(z_dim)))
+decodermodel_3.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/cae_if_mobi_g_decoder_3'+str(z_dim)))
 if usecuda:
     decodermodel_3.cuda(idgpu)
-
-ACT_LABELS = ["dws","ups", "wlk", "jog", "std"]
-TRIAL_CODES = {
-    ACT_LABELS[0]:[1,2,11],
-    ACT_LABELS[1]:[3,4,12],
-    ACT_LABELS[2]:[7,8,15],
-    ACT_LABELS[3]:[9,16],
-    ACT_LABELS[4]:[6,14],
-}
-act_labels = ACT_LABELS [0:4]
-from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, f1_score
-X_all = np.empty([0, x_train.shape[1], x_train.shape[2],x_train.shape[3]])
-Y_all_act = np.empty([0, 4])
-Y_all_gen = np.empty([0])
-X_original = np.empty([0, x_test.shape[1]])
-
-def print_act_results_f1_score(M, X, Y):
-    result1 = M.evaluate(X, Y, verbose = 2)
-    act_acc = round(result1[1], 4)*100
-    print("***[RESULT]*** ACT Accuracy: "+str(act_acc))
-
-    preds = M.predict(X)
-    preds = np.argmax(preds, axis=1)
-    conf_mat = confusion_matrix(np.argmax(Y, axis=1), preds)
-    conf_mat = conf_mat.astype('float') / conf_mat.sum(axis=1)[:, np.newaxis]
-    print("***[RESULT]*** ACT  Confusion Matrix")
-    print(" | ".join(act_labels))
-    print(np.array(conf_mat).round(3)*100)  
-
-    f1act = f1_score(np.argmax(Y, axis=1), preds, average=None).mean()
-    print("***[RESULT]*** ACT Averaged F-1 Score : "+str(f1act*100))
-
-def print_gen_results_f1_score(M, X, Y):
-    result1 = M.evaluate(X, Y, verbose = 2)
-    act_acc = round(result1[1], 4)*100
-    print("***[RESULT]*** Gender Accuracy: "+str(act_acc))
-
-    preds = M.predict(X)
-    preds_two_d = np.zeros((preds.shape[0], 2))
-    for lop in range(preds.shape[0]):
-        if preds[lop] < 0.5:
-            preds_two_d[lop, 0] = 1
-        else:
-            preds_two_d[lop, 1] = 1
     
-    Y_two_d = np.zeros((Y.shape[0], 2))
-    for lop in range(Y.shape[0]):
-        if Y[lop] == 0:
-            Y_two_d[lop, 0] = 1
-        else:
-            Y_two_d[lop, 1] = 1
-    
-    preds_two_d = np.argmax(preds_two_d, axis=1)
-    conf_mat = confusion_matrix(np.argmax(Y_two_d, axis=1), preds_two_d)
-    conf_mat = conf_mat.astype('float') / conf_mat.sum(axis=1)[:, np.newaxis]
-    print("***[RESULT]*** Gender  Confusion Matrix")
-    print(" | ".join(act_labels))
-    print(np.array(conf_mat).round(3)*100)  
-
-    f1act = f1_score(np.argmax(Y_two_d, axis=1), preds_two_d, average=None).mean()
-    print("***[RESULT]*** Gender Averaged F-1 Score : "+str(f1act*100))
-
 for activity in range(4):
     print("This is the current activity")
     print(activity)
@@ -417,8 +412,7 @@ for activity in range(4):
             pred_gen[index, 0] = 1
     
     hat_train_data = np.empty((0,768), float)
-    hat_gen_data = np.empty((0), float)
-
+    
     for act_inside in range(4):
         print(act_inside)
         Y_act_inside = pred_act[pred_act[:, act_inside] == 1]
@@ -498,22 +492,14 @@ for activity in range(4):
                 z_cat = torch.cat((z, y), dim=1)
                 x_hat = decodermodel(z_cat)
                 hat_train_data = np.append(hat_train_data, x_hat.data.cpu(), axis=0)
-            hat_gen_data = np.append(hat_gen_data, Y_test_gen, axis=0)
+
     X = np.reshape(hat_train_data, [train_data.shape[0], train_data.shape[1], train_data.shape[2],train_data.shape[3]])
     Y = act_train_labels
     print("Activity Identification:")
     print_results(eval_act_model, X, Y)
-    X_all = np.append(X_all, X, axis=0)
-    Y_all_act = np.append(Y_all_act, Y, axis=0)
 
     # X = np.reshape(hat_train_data, (hat_train_data.shape[0], 2, 128, 1))
-    Y = hat_gen_data
+    Y = gen_train_labels
     result1 = eval_gen_model.evaluate(X, Y)
     act_acc = round(result1[1], 4) * 100
     print("Gender Identification: " + str(act_acc))
-    Y_all_gen = np.append(Y_all_gen, Y, axis=0)
-
-# result1 = eval_act_model.evaluate(X_all, Y_all_act)
-print_act_results_f1_score(eval_act_model, X_all, Y_all_act)
-# result1 = eval_gen_model.evaluate(X_all, Y_all_gen)
-print_gen_results_f1_score(eval_gen_model, X_all, Y_all_gen)

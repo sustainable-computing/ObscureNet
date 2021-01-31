@@ -3,7 +3,7 @@ import os
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID";
 
 # The GPU id to use, usually either "0" or "1";
-os.environ["CUDA_VISIBLE_DEVICES"] = "2";
+os.environ["CUDA_VISIBLE_DEVICES"] = "1";
 from keras.layers import Reshape, Lambda
 import numpy as np
 import pandas as pd
@@ -370,7 +370,7 @@ def train_estimators():
 import numpy as np
 import os
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID";
-os.environ["CUDA_VISIBLE_DEVICES"] = "3";
+os.environ["CUDA_VISIBLE_DEVICES"] = "1";
 from keras.layers import Reshape, Lambda
 import numpy as np
 import pandas as pd
@@ -563,9 +563,9 @@ for z_dim in zed:
                 vaeLoss = -auxEncLoss
 
                 recons_loss = F.mse_loss(train_xr, train_x)*512
-                kld_loss = torch.mean(-0.1 * torch.sum(1 + log_var - mu ** 2 - log_var.exp(), dim = 1), dim = 0)
+                kld_loss = torch.mean(-2* torch.sum(1 + log_var - mu ** 2 - log_var.exp(), dim = 1), dim = 0)
 
-                loss = (recons_loss + kld_loss)/150 + vaeLoss
+                loss = (recons_loss + kld_loss)/150 + 0.2*vaeLoss
                 loss.backward()
 
                 optimizerencoder.step()
@@ -573,8 +573,8 @@ for z_dim in zed:
 
                 if(batch_idx%100 == 0):
                     print("Epoch %d : MSE is %f, KLD loss is %f, AUX loss is %f" % (i,recons_loss.data, kld_loss.data, auxLoss))
-        torch.save(encodermodel.state_dict(), '/home/omid/pycharm/Mobi/models/obs_motion_encoder_'+str(activity)+str(z_dim))
-        torch.save(decodermodel.state_dict(), '/home/omid/pycharm/Mobi/models/obs_motion_decoder_'+str(activity)+str(z_dim))
+        torch.save(encodermodel.state_dict(), '/home/omid/pycharm/Mobi/models/obs_motion_g_encoder_alpha_02_beta_2_'+str(activity)+str(z_dim))
+        torch.save(decodermodel.state_dict(), '/home/omid/pycharm/Mobi/models/obs_motion_g_decoder_alpha_02_beta_2_'+str(activity)+str(z_dim))
 
 def print_results(M, X, Y):
     result1 = M.evaluate(X, Y, verbose=2)
@@ -584,39 +584,99 @@ def print_results(M, X, Y):
 
 Latent_means = np.zeros((5, 2, z_dim))
 
+ACT_LABELS = ["dws","ups", "wlk", "jog", "std"]
+TRIAL_CODES = {
+    ACT_LABELS[0]:[1,2,11],
+    ACT_LABELS[1]:[3,4,12],
+    ACT_LABELS[2]:[7,8,15],
+    ACT_LABELS[3]:[9,16],
+    ACT_LABELS[4]:[6,14],
+}
+act_labels = ACT_LABELS [0:4]
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, f1_score
+X_all = np.empty([0, x_test.shape[1]])
+Y_all_act = np.empty([0, 5])
+Y_all_gen = np.empty([0])
+X_original = np.empty([0, x_test.shape[1]])
+
+def print_act_results_f1_score(M, X, Y):
+    result1 = M.evaluate(X, Y, verbose = 2)
+    act_acc = round(result1[1], 4)*100
+    print("***[RESULT]*** ACT Accuracy: "+str(act_acc))
+
+    preds = M.predict(X)
+    preds = np.argmax(preds, axis=1)
+    conf_mat = confusion_matrix(np.argmax(Y, axis=1), preds)
+    conf_mat = conf_mat.astype('float') / conf_mat.sum(axis=1)[:, np.newaxis]
+    print("***[RESULT]*** ACT  Confusion Matrix")
+    print(" | ".join(act_labels))
+    print(np.array(conf_mat).round(3)*100)  
+
+    f1act = f1_score(np.argmax(Y, axis=1), preds, average=None).mean()
+    print("***[RESULT]*** ACT Averaged F-1 Score : "+str(f1act*100))
+
+def print_gen_results_f1_score(M, X, Y):
+    result1 = M.evaluate(X, Y, verbose = 2)
+    act_acc = round(result1[1], 4)*100
+    print("***[RESULT]*** Gender Accuracy: "+str(act_acc))
+
+    preds = M.predict(X)
+    preds_two_d = np.zeros((preds.shape[0], 2))
+    for lop in range(preds.shape[0]):
+        if preds[lop] < 0.5:
+            preds_two_d[lop, 0] = 1
+        else:
+            preds_two_d[lop, 1] = 1
+    Y_two_d = np.zeros((Y.shape[0], 2))
+    for lop in range(Y.shape[0]):
+        if Y[lop] == 0:
+            Y_two_d[lop, 0] = 1
+        else:
+            Y_two_d[lop, 1] = 1
+    preds_two_d = np.argmax(preds_two_d, axis=1)
+    conf_mat = confusion_matrix(np.argmax(Y_two_d, axis=1), preds_two_d)
+    conf_mat = conf_mat.astype('float') / conf_mat.sum(axis=1)[:, np.newaxis]
+    print("***[RESULT]*** Gender  Confusion Matrix")
+    print(" | ".join(act_labels))
+    print(np.array(conf_mat).round(3)*100)  
+
+    f1act = f1_score(np.argmax(Y_two_d, axis=1), preds_two_d, average=None).mean()
+    print("***[RESULT]*** Gender Averaged F-1 Score : "+str(f1act*100))
+
+
 encodermodel_0 = Encoder().double()
-encodermodel_0.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/obs_motion_encoder_0'+str(z_dim)))
+encodermodel_0.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/obs_motion_g_encoder_alpha_02_beta_2_0'+str(z_dim)))
 if usecuda:
     encodermodel_0.cuda(idgpu)
 decodermodel_0 = Decoder().double()
-decodermodel_0.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/obs_motion_decoder_0'+str(z_dim)))
+decodermodel_0.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/obs_motion_g_decoder_alpha_02_beta_2_0'+str(z_dim)))
 if usecuda:
     decodermodel_0.cuda(idgpu)
 
 encodermodel_1 = Encoder().double()
-encodermodel_1.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/obs_motion_encoder_1'+str(z_dim)))
+encodermodel_1.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/obs_motion_g_encoder_alpha_02_beta_2_1'+str(z_dim)))
 if usecuda:
     encodermodel_1.cuda(idgpu)
 decodermodel_1 = Decoder().double()
-decodermodel_1.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/obs_motion_decoder_1'+str(z_dim)))
+decodermodel_1.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/obs_motion_g_decoder_alpha_02_beta_2_1'+str(z_dim)))
 if usecuda:
     decodermodel_1.cuda(idgpu)
 
 encodermodel_2 = Encoder().double()
-encodermodel_2.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/obs_motion_encoder_2'+str(z_dim)))
+encodermodel_2.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/obs_motion_g_encoder_alpha_02_beta_2_2'+str(z_dim)))
 if usecuda:
     encodermodel_2.cuda(idgpu)
 decodermodel_2 = Decoder().double()
-decodermodel_2.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/obs_motion_decoder_2'+str(z_dim)))
+decodermodel_2.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/obs_motion_g_decoder_alpha_02_beta_2_2'+str(z_dim)))
 if usecuda:
     decodermodel_2.cuda(idgpu)
 
 encodermodel_3 = Encoder().double()
-encodermodel_3.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/obs_motion_encoder_3'+str(z_dim)))
+encodermodel_3.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/obs_motion_g_encoder_alpha_02_beta_2_3'+str(z_dim)))
 if usecuda:
     encodermodel_3.cuda(idgpu)
 decodermodel_3 = Decoder().double()
-decodermodel_3.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/obs_motion_decoder_3'+str(z_dim)))
+decodermodel_3.load_state_dict(torch.load('/home/omid/pycharm/Mobi/models/obs_motion_g_decoder_alpha_02_beta_2_3'+str(z_dim)))
 if usecuda:
     decodermodel_3.cuda(idgpu)
     
@@ -668,7 +728,8 @@ for activity_index in range(4):
             pred_gen[index, 0] = 1
     
     hat_train_data = np.empty((0,256), float)
-    
+    hat_gen_data = np.empty((0), float)
+
     for act_inside in range(4):
         print(act_inside)
         Y_act_inside = pred_act[pred_act[:, act_inside] == 1]
@@ -746,15 +807,27 @@ for activity_index in range(4):
                 z_cat = torch.cat((z, y), dim=1)
                 x_hat = decodermodel(z_cat)
                 hat_train_data = np.append(hat_train_data, x_hat.data.cpu(), axis=0)
-    
+            hat_gen_data = np.append(hat_gen_data, Y_test_gen, axis=0)
     # X = np.reshape(hat_train_data, (hat_train_data.shape[0], 2, 128, 1))
     reconstructed_input = hat_train_data
     X = reconstructed_input
     Y = act_train_labels
     print("Activity Identification for Gender 0")
     print_results(eval_act_model, X, Y)
+    
+    X = hat_train_data
+    X_all = np.append(X_all, X, axis=0)
 
-    Y = gen_train_labels
+    Y = act_train_labels
+    Y_all_act = np.append(Y_all_act, Y, axis=0)
+
+    Y = hat_gen_data
     result1 = eval_gen_model.evaluate(X, Y)
     act_acc = round(result1[1], 4) * 100
     print("***[RESULT]***Original: Weight Train Accuracy Gender 0: " + str(act_acc))
+
+    Y = hat_gen_data
+    Y_all_gen = np.append(Y_all_gen, Y, axis=0)
+
+print_act_results_f1_score(eval_act_model, X_all, Y_all_act)
+print_gen_results_f1_score(eval_gen_model, X_all, Y_all_gen)
