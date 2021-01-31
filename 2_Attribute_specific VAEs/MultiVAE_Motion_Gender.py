@@ -1,3 +1,5 @@
+'''Keras code in someparts is borrowed from https://github.com/mmalekzadeh/motion-sense '''
+
 import os
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID";
