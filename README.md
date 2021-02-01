@@ -12,6 +12,9 @@ MotionSense Dataset: https://github.com/mmalekzadeh/motion-sense/tree/master/dat
 
 ## Development Setup
 Python3 === 3.6.9
+
 Tensorflow === 1.14.0
+
 Pytorch === 1.4.0
+
 Keras === 2.3.1
