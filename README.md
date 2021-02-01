@@ -1,20 +1,21 @@
 # ObscureNet
-Following is the code and implementation of ObscureNet and all the baselines used in the paper published and accepted in IoTDI'21. The paper is entitled "ObscureNet: Learning Attribute-invariant Latent Representationfor Anonymizing Sensor Data".
+This repository contains the implementation of ObscureNet and the baselines proposed in our IoTDI'21 paper entitled "ObscureNet: Learning Attribute-invariant Latent Representationfor Anonymizing Sensor Data".
 
-Different directories are named according to the techniques and baselines discussed in the paper.
+Each directory is named after a privacy-preserving method described in the paper.
 
 ## Datasets
-Two Human Activity Recognition (HAR) datasets used in this implementation are the MotionSense and MobiAct datasets. Please download the datasets accordingly and used the dataset builder codes in this repository and dataset directories to create the processed data used by the programs. To get the results use the dataset_subject_information CSV file provided by this repo and ignore the one in the original downloaded dataset MobiAct V 2.0.
+The 2 Human Activity Recognition (HAR) datasets used to evaluate different methods are MotionSense and MobiAct. 
+You can download them from the following websites and use the provided converter (dataset_builder.py) to preprocess the data and turn it into the format that our code expects:
+* [MobiAct V2.0 Dataset:](https://bmi.hmu.gr/the-mobifall-and-mobiact-datasets-2)
+* [MotionSense Dataset:](https://github.com/mmalekzadeh/motion-sense/tree/master/data)
 
-MobiAct V 2.0 Dataset: https://drive.google.com/file/d/0B5VcW5yHhWhielo5NTk1Q3ZiWDQ/edit
+To reproduce the results of our paper, use the CSV file dataset_subjects, which is provided in this repo, instead of the original one that comes with the MobiAct dataset.
 
-MotionSense Dataset: https://github.com/mmalekzadeh/motion-sense/tree/master/data
+## Dependencies
 
-## Development Setup
-Python3 === 3.6.9
-
-Tensorflow === 1.14.0
-
-PyTorch === 1.4.0
-
-Keras === 2.3.1
+| Package       | Version       |
+| ------------- |:-------------:| 
+| Python3       | 3.6.9         |
+| Tensorflow    | 1.14.0        |
+| PyTorch       | 1.4.0         |
+| Keras         | 2.3.1         |
