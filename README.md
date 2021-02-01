@@ -19,3 +19,6 @@ To reproduce the results of our paper, use the CSV file dataset_subjects, which 
 | Tensorflow    | 1.14.0        |
 | PyTorch       | 1.4.0         |
 | Keras         | 2.3.1         |
+
+## How to cite ObscureNet
+Omid Hajihassani, Omid Ardakanian and Hamzeh Khazaei. 2021. ObscureNet: Learning Attribute-invariant Latent Representation for Anonymizing Sensor Data, In _Proceedings of the 6th ACM/IEEE Conference on Internet of Things Design and Implementation (IoTDI)_.
