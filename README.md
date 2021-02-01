@@ -15,6 +15,6 @@ Python3 === 3.6.9
 
 Tensorflow === 1.14.0
 
-Pytorch === 1.4.0
+PyTorch === 1.4.0
 
 Keras === 2.3.1
