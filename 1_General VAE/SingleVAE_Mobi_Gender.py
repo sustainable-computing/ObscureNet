@@ -244,7 +244,7 @@ if usecuda:
 Latent_means = np.zeros((5, 2, z_dim))
 
 #Load data and Obtain Mean values from training data for Manipulation of the test data
-for activity in [4]:
+for activity in range(4):
     # Obtaining the Average Values from the Training Sets
     train_data = x_train
     act_train_labels = activity_train_label
@@ -295,7 +295,7 @@ for activity in [4]:
 
     Latent_means[activity, 0, :] = np.mean(z_train_0, axis=0)
     Latent_means[activity, 1, :] = np.mean(z_train_1, axis=0)
-np.save("/home/omid/pycharm/Mobi/latent", latents)
+np.save("/home/omid/pycharm/Mobi/latent", Latent_means)
 
 #Load the mean latent values to manipulate the test data
 Latent_means = np.load('/home/omid/pycharm/Mobi/latents.npy')    
